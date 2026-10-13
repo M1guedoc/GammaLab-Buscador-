@@ -2,8 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gamma Laboratories – Buscador</title>
+  <meta name="robots" content="noindex, nofollow">
   <style>
     :root {
       --primary: #0b3c8c;
@@ -193,6 +194,30 @@
       opacity: 1;
       bottom: 50px;
     }
+
+    .catalog-summary { margin-bottom: 1rem; color: var(--text-muted); font-size: .85rem; }
+    .catalog-summary strong { color: var(--primary); }
+    .search-icon { pointer-events: none; }
+    input#q { padding-right: 3rem; }
+    .clear-btn { position: absolute; right: .6rem; top: 50%; transform: translateY(-50%); border: 0; background: #eef2f6; width: 38px; height: 38px; border-radius: 8px; color: var(--text-main); cursor: pointer; font-size: 1.25rem; }
+    .filters { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
+    .filter-field { flex: 1 1 220px; }
+    .filter-field label { display: block; font-size: .8rem; margin-bottom: .3rem; font-weight: 600; }
+    .filter-field select { width: 100%; min-height: 44px; padding: .6rem; border: 1px solid var(--border); background: white; border-radius: 8px; color: var(--text-main); font: inherit; font-size: .9rem; }
+    .product-meta { color: var(--text-muted); font-size: .75rem; margin-bottom: .75rem; }
+    .med-name { margin-bottom: .3rem; }
+    .price-grid { grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); }
+    .price-item { min-width: 0; }
+    .price-info { min-width: 0; }
+    .price-label { overflow-wrap: anywhere; }
+    .copy-btn { min-width: 44px; min-height: 44px; }
+    .unavailable { font-size: .85rem; color: var(--text-muted); }
+    .more-btn { display: block; margin: 1.25rem auto; padding: .8rem 1.4rem; border: 1px solid var(--primary); border-radius: 10px; background: white; color: var(--primary); font: inherit; cursor: pointer; }
+    .more-btn:hover { background: #eaf1fb; }
+    button:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    [hidden] { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
@@ -200,462 +225,189 @@
   <header>
     <div class="header-content">
       <div class="brand">
-        <span style="font-size: 1.5rem;">⚕️</span>
+        <span style="font-size: 1.5rem;" aria-hidden="true">⚕</span>
         <div>
           <h1>GAMMA LABORATORIES</h1>
           <small>Buscador de Precios</small>
         </div>
       </div>
-      <div class="badge">🔒 Uso Interno · Oct 2026</div>
+      <div class="badge">Uso interno · Equipo comercial</div>
     </div>
   </header>
 
   <main>
+    <p class="catalog-summary"><strong id="catalogTotal">0</strong> productos · Precios para el equipo comercial</p>
     <div class="search-container">
-      <span class="search-icon">🔍</span>
-      <input id="q" type="text" placeholder="Buscar medicamento, principio activo..." autocomplete="off">
+      <label for="q" class="sr-only">Buscar por nombre, presentación o código</label>
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="q" type="search" placeholder="Buscar producto, presentación o código…" autocomplete="off" spellcheck="false">
+      <button id="clear" class="clear-btn" type="button" aria-label="Limpiar búsqueda" hidden>×</button>
     </div>
-
-    <div class="result-counter">
-      <span>Mostrando <strong id="countLabel">0</strong> resultados</span>
+    <div class="filters">
+      <div class="filter-field">
+        <label for="linea">Laboratorio o línea</label>
+        <select id="linea"><option value="">Todas las líneas</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="categoria">Categoría de precio</label>
+        <select id="categoria">
+          <option value="">Todas las categorías</option>
+          <option value="c">Cadenas</option>
+          <option value="f">Farmacias independientes</option>
+          <option value="d">Distribuidores</option>
+          <option value="p">Precio al público</option>
+        </select>
+      </div>
     </div>
-
-    <div id="r"></div>
-
+    <div class="result-counter" role="status" aria-live="polite" aria-atomic="true">
+      <span>Mostrando <strong id="shownLabel">0</strong> de <strong id="countLabel">0</strong> resultados · Catálogo: <span id="totalLabel">0</span></span>
+    </div>
+    <div id="r" aria-label="Productos encontrados"></div>
     <div id="emptyState" class="empty-state">
-      <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📦</div>
       <h3>No se encontraron productos</h3>
-      <p>Intenta con otro nombre o verifica la ortografía.</p>
+      <p>Prueba con otro nombre, presentación o código, o cambia el filtro de línea.</p>
     </div>
+    <button id="more" class="more-btn" type="button" hidden>Cargar más</button>
+    <noscript>Activa JavaScript en tu navegador para consultar el catálogo.</noscript>
   </main>
 
   <footer>
-    Actualizado 07 de Octubre 2026 · Uso interno exclusivo · Todos los precios incluyen IVA
+    <div id="validity"></div>
+    <div id="publication"></div>
+    <div>Uso interno exclusivo · Todos los precios incluyen IVA</div>
   </footer>
 
-  <div id="toast">¡Copiado!</div>
+  <div id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    (function() {
-      const DATA = [
-        // LÍNEA GAMMA (145 productos - actualizado con PREDSOLAN JARABE)
-        {"m": "ADEMIN GOT. PED. F X 15ml.", "c": "3.35", "f": "2.88", "d": "2.60", "p": "5.99"},
-        {"m": "AZTHOMAC 200mg/5ml. Polv. P/S. F X 15ml", "c": "5.03", "f": "3.50", "d": "3.00", "p": "8.99"},
-        {"m": "AZTHOMAC 200mg/5ml. Polv. P/S. F X 30ml", "c": "8.95", "f": "5.81", "d": "4.93", "p": "15.99"},
-        {"m": "AZTHOMAC 500mg. Caps. C X 3", "c": "4.90", "f": "4.68", "d": "4.41", "p": "8.75"},
-        {"m": "AZTHOMAC 500mg. Caps. C X 5", "c": "8.00", "f": "5.30", "d": "5.00", "p": "14.29"},
-        {"m": "AZTHOMAC 500mg. Caps. Disp. X 25 Cápsulas", "c": "32.49", "f": "22.50", "d": "18.75", "p": "58.02"},
-        {"m": "ANGUS SOLUCIÓN ORAL CX15 X 15mL", "c": "9.60", "f": "6.40", "d": "6.40", "p": "19.99"},
-        {"m": "BACTEL COMPUESTO Susp. F X 15ml", "c": "5.11", "f": "4.38", "d": "3.65", "p": "9.13"},
-        {"m": "B-12 GAMMA JARABE CAJA X 15 FRASCOS X 15ml", "c": "8.40", "f": "4.40", "d": "4.40", "p": "15.00"},
-        {"m": "CALCIGAM SUSP.ORAL Cx 15 F X 15 ML", "c": "8.68", "f": "4.95", "d": "4.95", "p": "15.50"},
-        {"m": "CEFTRIGAM 1g P/P/S Inyectable CX1", "c": "5.00", "f": "3.20", "d": "3.20", "p": "11.65"},
-        {"m": "CEFIGAM (Cefixima) 400mg Comprimidos CX10", "c": "16.79", "f": "7.00", "d": "7.00", "p": "29.99"},
-        {"m": "CEFIGAM (Cefixima) 100mg Polvo Para Susp. Fx50ml", "c": "7.77", "f": "6.66", "d": "5.55", "p": "13.88"},
-        {"m": "CIPROFLOXACINA 500mg. Tab. Bo. X 1000", "c": "65.00", "f": "65.00", "d": "65.00", "p": ""},
-        {"m": "CIPROFLOXACINA 500mg. Tab. C X 100", "c": "8.10", "f": "8.10", "d": "8.10", "p": "65.00"},
-        {"m": "CIPROP (CIPROHEPTADINA) 2mg/5ml Jarabe F X 120ml (VIDRIO)", "c": "5.77", "f": "5.77", "d": "5.77", "p": "10.31"},
-        {"m": "CIPROP FORTE Jbe. F X 240ml (VIDRIO)", "c": "7.90", "f": "7.90", "d": "7.90", "p": "14.11"},
-        {"m": "CIPROP 2mg/5mL Jarabe C X 15 FRASCOS", "c": "10.63", "f": "9.87", "d": "9.12", "p": "18.99"},
-        {"m": "CLID NF Tab. Recubierta Bo. X 1000", "c": "37.00", "f": "37.00", "d": "37.00", "p": ""},
-        {"m": "CLID NF Tab. Recubierta C X 100", "c": "6.25", "f": "6.25", "d": "6.25", "p": "27.50"},
-        {"m": "CLOBAGAMM 10mg TABLETAS CX30", "c": "6.90", "f": "6.90", "d": "6.90", "p": "12.34"},
-        {"m": "CLOMAZOL 1% CREMA TOP. Tu. X 20g", "c": "2.35", "f": "2.35", "d": "2.35", "p": "3.99"},
-        {"m": "CLOMAZOL V 1% CREMA VAG. Tu. X 35g", "c": "3.91", "f": "3.00", "d": "2.80", "p": "6.99"},
-        {"m": "CLORFENIRAMINA 8mg. Tab. Bo. X 1000", "c": "21.25", "f": "21.25", "d": "21.25", "p": ""},
-        {"m": "CLORFENIRAMINA 8mg. Tab. C X 100", "c": "2.45", "f": "2.45", "d": "2.45", "p": "14.99"},
-        {"m": "CLORFENIRAMINA Jbe. 2mg/5ml. F X 120ml. S/C (PET)", "c": "1.95", "f": "1.00", "d": "1.00", "p": "3.49"},
-        {"m": "CODEFORT Tab. C X 100", "c": "20.72", "f": "20.72", "d": "20.72", "p": "68.49"},
-        {"m": "CODEFORT Tab. C X 20", "c": "7.67", "f": "6.35", "d": "5.99", "p": "13.70"},
-        {"m": "COLIRIO NAFAZOLINA F X 15ml", "c": "2.40", "f": "1.60", "d": "1.40", "p": "4.29"},
-        {"m": "COMFORT SPM CX20 Grageas y 20 cápsulas", "c": "5.60", "f": "5.20", "d": "4.80", "p": "10.00"},
-        {"m": "COMPLEJO B Tab. C X 100", "c": "9.52", "f": "3.00", "d": "2.30", "p": "17.00"},
-        {"m": "COMPLEJO B Tab. Bo. X 1000", "c": "25.00", "f": "25.00", "d": "25.00", "p": ""},
-        {"m": "CONJUNTIVAL 0.3% SOLUCION OFTÁLMICA F X 5ML", "c": "4.47", "f": "4.15", "d": "3.84", "p": "7.99"},
-        {"m": "CORITOS Jbe. F X 120ml.", "c": "5.59", "f": "3.00", "d": "3.00", "p": "9.99"},
-        {"m": "CORITOS NF GOT. PED. F X 30ml.", "c": "5.59", "f": "4.21", "d": "4.21", "p": "9.99"},
-        {"m": "D.D.F.-3 CREMA TOP. Tu. X 20g", "c": "4.61", "f": "3.00", "d": "2.70", "p": "8.23"},
-        {"m": "D.D.F.-3 CREMA TOP. Tu. X 30g", "c": "7.41", "f": "5.30", "d": "5.00", "p": "13.24"},
-        {"m": "DIPROFIL 6.67mg/ ml. JARABE . F X 240 MLVIDRIO", "c": "8.39", "f": "7.79", "d": "7.20", "p": "14.99"},
-        {"m": "DER-AL ALIVIA PICADURAS CREMA Tu. X 20g", "c": "6.15", "f": "5.98", "d": "5.39", "p": "10.99"},
-        {"m": "DOLEFRIN 100mg/5ml. Susp. F X 120ml.", "c": "2.51", "f": "1.90", "d": "1.75", "p": "5.75"},
-        {"m": "DOLEFRIN 400mg. Caps. Bo. X 1000", "c": "75.00", "f": "75.00", "d": "75.00", "p": ""},
-        {"m": "ELETÍN 200mg Cápsulas F x 60", "c": "11.75", "f": "10.91", "d": "10.08", "p": "20.99"},
-        {"m": "ENTEROGAMMA Susp. F X 120ml.", "c": "4.75", "f": "3.79", "d": "3.05", "p": "8.48"},
-        {"m": "FLAZOL 500mg. Tab. Bo. X 1000", "c": "35.27", "f": "35.27", "d": "35.27", "p": ""},
-        {"m": "FLUCONAZOL GAMMA 150mg CAJA X 10", "c": "14.40", "f": "5.50", "d": "3.90", "p": "30.00"},
-        {"m": "FOLHEM 5mg. Tab. C X 30", "c": "2.79", "f": "2.19", "d": "1.86", "p": "4.99"},
-        {"m": "FOLHEM C/HIERRO ELIXIR F X 120ml.", "c": "5.31", "f": "4.00", "d": "3.40", "p": "9.49"},
-        {"m": "FOLHEM ELIXIR CAJA X 15 FRASCO X 15ml.", "c": "8.68", "f": "4.75", "d": "4.75", "p": "15.50"},
-        {"m": "FLUDICAR 50 mg/ml JARABE C X 15FX 15ml", "c": "7.55", "f": "7.01", "d": "6.48", "p": "13.49"},
-        {"m": "FLUDICAR 50 mg/ml.Jbe. F X 120 ml (VIDRIO)", "c": "3.91", "f": "3.63", "d": "3.36", "p": "6.99"},
-        {"m": "GAMMA CLARITRO 250mg/5mL Polv. P/SUSP.ORAL FX60ml", "c": "10.36", "f": "8.88", "d": "7.40", "p": "18.50"},
-        {"m": "GAMMACORT Jbe. F X 120ml.", "c": "6.69", "f": "6.21", "d": "5.74", "p": "11.95"},
-        {"m": "GAMMACORT IP 320/9 µg PPI, CÁPS. F X 60 + INHALADOR", "c": "27.99", "f": "25.99", "d": "23.99", "p": "49.99"},
-        {"m": "GAMMAFLUX SUSP. P/INH. NASAL 120 APLIC. F X 8ml", "c": "11.19", "f": "9.59", "d": "8.00", "p": "19.99"},
-        {"m": "GAMMALAX 10g/15ml Solución F X 120ml", "c": "6.15", "f": "5.28", "d": "4.40", "p": "10.99"},
-        {"m": "GAMMALAX 10g/15ml Solución F X 240ml", "c": "11.19", "f": "9.60", "d": "8.00", "p": "19.99"},
-        {"m": "GAMMALER 2mg/5ml JARABE F X 240ml", "c": "5.59", "f": "4.79", "d": "3.99", "p": "9.99"},
-        {"m": "GAMMALER OFTALMO SOLUCIÓN OFTALMICA FX15ML", "c": "3.91", "f": "3.63", "d": "3.36", "p": "6.99"},
-        {"m": "GAMMAMINERAL Jbe. F X 120ml", "c": "5.59", "f": "4.80", "d": "4.00", "p": "9.99"},
-        {"m": "GAMMAMINERAL Jbe. F X 240ml", "c": "8.67", "f": "7.44", "d": "6.20", "p": "15.49"},
-        {"m": "GAMMAMINERAL L C X 15 FRASCOS X 15ml", "c": "8.96", "f": "5.10", "d": "5.10", "p": "16.00"},
-        {"m": "GAMMATRIL 2.5MG/ML SOLUCION ORAL GOTAS FX30ML", "c": "6.71", "f": "6.71", "d": "6.71", "p": "11.99"},
-        {"m": "GAMMATRIL 2MG TABLETAS CAJA X30 TABLETAS", "c": "3.64", "f": "3.64", "d": "3.64", "p": "6.50"},
-        {"m": "GAMMATRIL 2MG TABLETAS CAJA X100 TABLETAS", "c": "11.20", "f": "11.20", "d": "11.20", "p": "20.00"},
-        {"m": "GAMMATOS ANTITUSIVO Jbe. F X 120ml", "c": "7.04", "f": "7.04", "d": "7.04", "p": "12.58"},
-        {"m": "GAMMATOS ANTITUSIVO Jbe. F X 240ml", "c": "9.83", "f": "9.83", "d": "9.83", "p": "17.56"},
-        {"m": "GAMMATOS EXPECT. FCO. GOTERO F X 30ml", "c": "3.35", "f": "2.44", "d": "2.07", "p": "5.99"},
-        {"m": "GAMMATOS EXPECT. Jbe. F X 120ml", "c": "5.79", "f": "5.79", "d": "5.79", "p": "10.33"},
-        {"m": "GAMMATOS EXPECT. Jbe. F X 240ml", "c": "8.95", "f": "8.95", "d": "8.95", "p": "15.99"},
-        {"m": "GAMMAZINC Jbe. F X 120ml", "c": "5.59", "f": "4.80", "d": "4.00", "p": "9.99"},
-        {"m": "GAMMAZINC Jbe. F X 240ml", "c": "7.25", "f": "6.22", "d": "5.18", "p": "12.95"},
-        {"m": "GAMMOXIL S POLVO PARA SUSPENSIÓN F X 90ml", "c": "18.47", "f": "17.15", "d": "15.84", "p": "32.99"},
-        {"m": "GLIBENCLAMIDA 5mg. Tab. C X 100", "c": "2.99", "f": "2.99", "d": "2.99", "p": "14.99"},
-        {"m": "GLICERINA FENICADA GOT. PED. F X 15ml.", "c": "2.11", "f": "1.30", "d": "1.30", "p": "3.76"},
-        {"m": "GLICERINA OTICA GOT. PED. F X 15ml.", "c": "2.11", "f": "1.00", "d": "1.00", "p": "3.76"},
-        {"m": "HEMATOFULL CAJA X 15 FRASCOS X 15ml", "c": "8.40", "f": "4.40", "d": "4.40", "p": "15.00"},
-        {"m": "HIDROCORTISONA 1% CREMA TOP. Tu. X 15g", "c": "2.38", "f": "2.00", "d": "2.00", "p": "4.25"},
-        {"m": "IPRAMIST SPRAY NASAL F X 15ml/200 Aplicaciones", "c": "8.95", "f": "7.68", "d": "6.40", "p": "15.99"},
-        {"m": "IPRAMIST-N 250mcg/mL Fco. Gotero F X 20ML", "c": "5.03", "f": "4.32", "d": "3.60", "p": "8.99"},
-        {"m": "IPRAMIST-N 750mcg/mL Fco. Gotero F X 20ML", "c": "10.07", "f": "8.64", "d": "7.20", "p": "17.99"},
-        {"m": "IREN FORTE F X 120ml.", "c": "12.11", "f": "11.12", "d": "10.49", "p": "21.62"},
-        {"m": "IREN FORTE JARABE CX15 FRASCOS DE 10ML", "c": "14.70", "f": "12.60", "d": "10.50", "p": "26.25"},
-        {"m": "KAOPEXIN C/NEO. Susp. F X 120ml.", "c": "4.17", "f": "3.87", "d": "3.57", "p": "7.44"},
-        {"m": "KAOPEXIN Susp. F X 120ml.", "c": "4.47", "f": "2.30", "d": "1.85", "p": "7.99"},
-        {"m": "KESAN-G 2% CREMA TOP. Tu. X 15g", "c": "2.19", "f": "2.10", "d": "2.10", "p": "3.91"},
-        {"m": "LANTRIX CREMA VAGINAL TUBO X 50g", "c": "11.19", "f": "10.39", "d": "9.60", "p": "19.99"},
-        {"m": "LEVOGAM 500MG COMPRIMIDOS C X 10", "c": "14.00", "f": "5.00", "d": "5.00", "p": "25.00"},
-        {"m": "LEVOGAM 750MG COMPRIMIDOS C X 10", "c": "22.40", "f": "6.50", "d": "6.50", "p": "40.00"},
-        {"m": "LYVERA 300MG CAPSULAS C X 100", "c": "28.00", "f": "24.00", "d": "20.00", "p": "50.00"},
-        {"m": "LYVERA 300MG CAPSULAS C X 10", "c": "2.80", "f": "2.40", "d": "2.00", "p": "5.00"},
-        {"m": "LORALER 10mg. Tab. Bo. X 1000", "c": "40.47", "f": "40.47", "d": "40.47", "p": ""},
-        {"m": "LORALER 10mg. Tab. C X 100", "c": "4.05", "f": "4.05", "d": "4.05", "p": "39.99"},
-        {"m": "MEDIFLU Jbe. F X 120ml.", "c": "5.76", "f": "5.10", "d": "4.93", "p": "10.28"},
-        {"m": "MEDIFLU GOTAS PEDIÁTRICAS FRASCO X 30ml", "c": "4.47", "f": "4.15", "d": "3.84", "p": "7.99"},
-        {"m": "METOCARBAMOL 500mg. Tab. C X 100", "c": "5.00", "f": "5.00", "d": "5.00", "p": "25.99"},
-        {"m": "METOCARBAMOL Tab. Bo. X 1000", "c": "40.00", "f": "40.00", "d": "40.00", "p": ""},
-        {"m": "MULTIVITAMINAS Jbe. F X 120ml. (PET)", "c": "1.95", "f": "1.07", "d": "1.07", "p": "3.49"},
-        {"m": "MULTIVITAMINAS Tab. Recubierta Bo. X 1000", "c": "28.00", "f": "28.00", "d": "28.00", "p": ""},
-        {"m": "MULTIVITAMINAS Tab. Recubierta C X 50", "c": "2.25", "f": "2.25", "d": "2.25", "p": "9.83"},
-        {"m": "MULTIVITAMINAS JBE CAJA X 15 FRASCOS DE 15ml", "c": "8.40", "f": "4.40", "d": "4.40", "p": "15.00"},
-        {"m": "MULTIVITAMINAS Tab. Recubierta C X 100", "c": "11.20", "f": "3.30", "d": "2.60", "p": "20.00"},
-        {"m": "NEOBAN UNG. Tu. X 15g", "c": "3.80", "f": "1.95", "d": "1.95", "p": "6.79"},
-        {"m": "NINE MULTIV. PRENAT. CX30 Tab. Recubierta", "c": "5.71", "f": "4.46", "d": "3.58", "p": "10.20"},
-        {"m": "NOXAT 5mg. Tab. Recubierta Bo. X 1000", "c": "48.51", "f": "48.51", "d": "48.51", "p": ""},
-        {"m": "NOXAT 5mg. Tab. Recubierta C X 100", "c": "4.85", "f": "4.85", "d": "4.85", "p": "24.99"},
-        {"m": "NOXAT 5mg/ml. GOT. PED. F X 30ml.", "c": "4.60", "f": "2.25", "d": "1.95", "p": "6.57"},
-        {"m": "PASTA LASSAR ADULTOS Ta. X 250g", "c": "6.05", "f": "6.00", "d": "6.00", "p": "10.80"},
-        {"m": "PASTA LASSAR CREMA TOP. Ta. X 250g", "c": "6.10", "f": "5.80", "d": "5.80", "p": "10.88"},
-        {"m": "PASTA LASSAR CREMA TOP. Ta. X 500g", "c": "9.30", "f": "9.25", "d": "9.25", "p": "16.60"},
-        {"m": "PASTA LASSAR CREMA TOP. Ta. X 80g", "c": "3.61", "f": "3.52", "d": "3.40", "p": "6.45"},
-        {"m": "PREDSOLAN 5mg. Tab. Bo. X 1000", "c": "46.10", "f": "46.10", "d": "46.10", "p": ""},
-        {"m": "PREDSOLAN 5mg. Tab. C X 100", "c": "4.61", "f": "4.61", "d": "4.61", "p": "25.99"},
-        {"m": "PREDSOLAN 20mg. Tab. C X 100", "c": "22.40", "f": "19.20", "d": "16.00", "p": "40.00"},
-        {"m": "PREDSOLAN 50mg. Tab. C X 100", "c": "30.80", "f": "26.40", "d": "22.00", "p": "55.00"},
-        {"m": "PREDSOLAN 15mg/5ml JARABE 120ML", "c": "8.95", "f": "8.31", "d": "7.68", "p": "15.99"},
-        {"m": "QUIXANID 500mg. Tab. Bo. X 1000", "c": "76.99", "f": "76.99", "d": "76.99", "p": ""},
-        {"m": "QUIXANID 500mg. Tab. C X 30", "c": "3.91", "f": "3.40", "d": "3.40", "p": "6.99"},
-        {"m": "RESPIREX 0.5mg/ml SOLUCION SPRAY NASAL Fx30ml", "c": "3.80", "f": "3.26", "d": "2.72", "p": "6.79"},
-        {"m": "RESPIREX PEDIATRICO GOTAS NASALES Fx15ml", "c": "2.79", "f": "2.40", "d": "2.00", "p": "4.99"},
-        {"m": "RINOTAPP FLU TABLETAS C X 100", "c": "16.79", "f": "5.50", "d": "5.50", "p": "29.99"},
-        {"m": "RINOTAPP FLU TABLETAS C X 20", "c": "6.15", "f": "2.25", "d": "2.25", "p": "10.99"},
-        {"m": "RINOTAPP Jbe. F X 120ml.", "c": "5.75", "f": "5.34", "d": "5.34", "p": "10.28"},
-        {"m": "S.S.N. GOT. PED. F X 240ml.", "c": "3.46", "f": "3.40", "d": "3.21", "p": "6.18"},
-        {"m": "S.S.N. GOT. PED. F X 30ml.", "c": "2.31", "f": "2.31", "d": "2.00", "p": "4.13"},
-        {"m": "S.S.N. GOT. PED. LITRO 1000ML", "c": "7.51", "f": "7.51", "d": "7.51", "p": "13.41"},
-        {"m": "S.S.N. SPRAY NASAL Susp. F X 50ml/500 Aplicaciones", "c": "3.35", "f": "2.88", "d": "2.88", "p": "5.99"},
-        {"m": "S.S.N. SPRAY NASAL Susp. F X 100ml/1000 Aplicaciones", "c": "4.47", "f": "3.84", "d": "3.20", "p": "7.99"},
-        {"m": "SINAIREX 100mg/ml. GOTAS F X 30ml.", "c": "3.63", "f": "2.90", "d": "2.47", "p": "6.49"},
-        {"m": "SINAPTIC CÁPSULAS F X 30", "c": "16.79", "f": "15.59", "d": "15.00", "p": "29.99"},
-        {"m": "SINTEMP 120mg/5ml. Jbe. F X 120ml. S/C (PET)", "c": "1.84", "f": "1.15", "d": "1.15", "p": "3.49"},
-        {"m": "SINTEMP 500mg. Tab. Bo. X 1000", "c": "25.00", "f": "25.00", "d": "25.00", "p": "43.82"},
-        {"m": "SIRYALE SPRAY NASAL AD. Susp. 20g/150 Aplicaciones", "c": "13.15", "f": "12.21", "d": "11.28", "p": "23.49"},
-        {"m": "SIRYALE SPRAY NASAL INF. Susp. 10g/75 Aplicaciones", "c": "8.77", "f": "8.14", "d": "7.52", "p": "15.66"},
-        {"m": "SUPRETOS 35.4MG/5ML SUSPENSION FX120ML (VIDRIO)", "c": "7.83", "f": "7.27", "d": "6.72", "p": "13.99"},
-        {"m": "TENSAL TABLETAS 20MG B X 1000", "c": "17.99", "f": "17.99", "d": "17.99", "p": "355.25"},
-        {"m": "TIZAFLEX® 4mg Tab. C X 100", "c": "10.00", "f": "10.00", "d": "10.00", "p": "71.57"},
-        {"m": "TOXAZOL FORTE TABLETAS BOLSA X 1,000", "c": "65.00", "f": "65.00", "d": "65.00", "p": "750.20"},
-        {"m": "TOXAZOL Susp. F X 100ml.", "c": "3.28", "f": "2.81", "d": "2.34", "p": "5.85"},
-        {"m": "TRAUM GEL USO TOPICO Tu. X 35g", "c": "3.91", "f": "2.80", "d": "2.52", "p": "6.99"},
-        {"m": "TRICOZOL DUO CREMA VAGINAL Tu x 50g", "c": "7.83", "f": "7.27", "d": "6.72", "p": "13.99"},
-        {"m": "TRICOZOL DUO ORAL (1 B X 1 fluconazol 150mg+1BX4 tinidazol 500mg)", "c": "7.81", "f": "7.25", "d": "6.70", "p": "13.95"},
-        {"m": "TRIPTOFARM 200mg TABLETAS FX60", "c": "25.19", "f": "23.39", "d": "21.60", "p": "44.99"},
-        {"m": "ZEBAN 500mg. Tab. Bo. X 1000", "c": "85.00", "f": "85.00", "d": "85.00", "p": ""},
-        {"m": "ZEBAN 500mg. Tab. C X 8", "c": "1.60", "f": "1.60", "d": "1.60", "p": "10.49"},
-        {"m": "ZOST 5mg. CREMA TOP. Tu. X 5g", "c": "2.79", "f": "1.50", "d": "1.50", "p": "4.99"},
-        
-        // DHU (2 productos)
-        {"m": "Climaktolan Fx80 tab (DHU)", "c": "13.79", "f": "13.79", "d": "11.50", "p": "22.99"},
-        {"m": "Immunokind Fx150 tab (DHU)", "c": "11.19", "f": "11.19", "d": "10.00", "p": "19.99"},
-        
-        // ARNET-BELLEVIE (7 productos)
-        {"m": "Alcázar D Fx60 (ARNET)", "c": "7.20", "f": "7.20", "d": "6.00", "p": "14.99"},
-        {"m": "Papaya Tabs Fx100 (ARNET)", "c": "9.60", "f": "9.60", "d": "8.00", "p": "19.99"},
-        {"m": "Serene Fx60 (ARNET)", "c": "12.00", "f": "12.00", "d": "10.00", "p": "24.99"},
-        {"m": "Sublime Tabletas Recubiertas Fx90 (ARNET)", "c": "13.99", "f": "10.00", "d": "8.50", "p": "24.99"},
-        {"m": "Sustenta Fx60 (ARNET)", "c": "14.40", "f": "14.40", "d": "12.00", "p": "29.99"},
-        {"m": "Terifem 250mg Cápsulas Fx30 (ARNET)", "c": "8.39", "f": "7.79", "d": "7.20", "p": "14.99"},
-        {"m": "Varicur Fx60 (ARNET)", "c": "14.40", "f": "14.40", "d": "12.00", "p": "29.99"},
-        
-        // CANTABRIA - BIRETIX (14 productos - actualizado con 2 nuevos)
-        {"m": "BIRETIX BARRA DERMATOLÓGICA 80g", "c": "7.49", "f": "6.99", "d": "6.00", "p": "12.49"},
-        {"m": "BIRETIX CLEANSER GEL LIMPIADOR F X 200ML", "c": "14.69", "f": "13.71", "d": "11.76", "p": "24.49"},
-        {"m": "BIRETIX CLEANSER GEL LIMPIADOR PURIFICANTE F X 400mL", "c": "23.99", "f": "22.39", "d": "19.20", "p": "39.99"},
-        {"m": "BIRETIX DUO 30 ML", "c": "17.99", "f": "16.79", "d": "14.40", "p": "29.99"},
-        {"m": "BIRETIX DOUBLE CORRECTION SERUM TX30ML", "c": "34.19", "f": "31.91", "d": "27.36", "p": "56.99"},
-        {"m": "BIRETIX FOCUS GEL Tx15ML", "c": "13.37", "f": "12.48", "d": "10.70", "p": "22.29"},
-        {"m": "BIRETIX ISOREPAIR CREMA HIDRATANTE TUBO X 50ML", "c": "15.59", "f": "14.55", "d": "12.48", "p": "25.99"},
-        {"m": "BIRETIX HYDRAMAT F X 50ML", "c": "13.49", "f": "12.59", "d": "10.80", "p": "22.49"},
-        {"m": "BIRETIX MICROPEEL 50 ML", "c": "17.99", "f": "16.79", "d": "14.40", "p": "29.99"},
-        {"m": "BIRETIX OIL CONTROL SOLUTION FX100ML", "c": "16.79", "f": "15.59", "d": "14.40", "p": "29.99"},
-        {"m": "BIRETX MASK 25ML", "c": "16.79", "f": "15.67", "d": "13.44", "p": "27.99"},
-        {"m": "BIRETIX TRI-ACTIVE GEL FRASCO X 50ML", "c": "17.99", "f": "16.79", "d": "14.40", "p": "29.99"},
-        {"m": "BIRETIX TRI-ACTIVE SPRAY Fx100ML", "c": "20.09", "f": "18.75", "d": "16.08", "p": "33.49"},
-        {"m": "BIRETIX ISOREPAIR BÁLSAMO LABIAL Tu.x10mL", "c": "9.59", "f": "8.95", "d": "7.68", "p": "15.99"},
-        
-        // CANTABRIA - ENDOCARE (21 productos - actualizado con 2 nuevos)
-        {"m": "ENDO AGE BARRIER HYALUBOOST SERUM FX30ML", "c": "38.99", "f": "36.39", "d": "31.20", "p": "64.99"},
-        {"m": "ENDO AGE BARRIER HYALUBOOST CONTORNO OJOS 15ML", "c": "23.99", "f": "22.39", "d": "19.20", "p": "39.99"},
-        {"m": "ENDO AGE BARRIER HYALU. GELCREAM Ta.x50mL", "c": "29.39", "f": "27.43", "d": "23.52", "p": "48.99"},
-        {"m": "ENDO AQUAFOAM LIMPIADOR 125ML", "c": "16.79", "f": "15.67", "d": "13.44", "p": "27.99"},
-        {"m": "ENDOCARE RADIANCE FERULIC EDAFENCE SERUM F X 30ML", "c": "35.09", "f": "32.75", "d": "28.08", "p": "58.49"},
-        {"m": "ENDO RADIANCE CONTORNO DE OJOS TUBO X 15ML", "c": "29.99", "f": "27.99", "d": "24.00", "p": "49.99"},
-        {"m": "ENDO RADIANCE C20% SERUM Fx30mL", "c": "44.99", "f": "41.99", "d": "36.00", "p": "74.99"},
-        {"m": "ENDO GELCREAM 30ML", "c": "23.69", "f": "22.11", "d": "18.96", "p": "39.49"},
-        {"m": "ENDO GLYCOPERFECT (AZ) INTENSIVE SERUM FX50ML", "c": "39.59", "f": "36.95", "d": "31.68", "p": "65.99"},
-        {"m": "ENDO GLYCOPERFECT (AZ) CREAMY CLEANSER FX150ML", "c": "20.99", "f": "19.59", "d": "16.80", "p": "34.99"},
-        {"m": "ENDO HYDRACTIVE MICELLAR SOLUTION FX100ML", "c": "6.89", "f": "6.43", "d": "5.52", "p": "11.49"},
-        {"m": "ENDO HYDRACTIVE MICELLAR SOLUTION FX400ML", "c": "18.29", "f": "17.07", "d": "14.64", "p": "30.49"},
-        {"m": "ENDO TENSAGE CONCENTRATE AMPOLLAS 10X2ML", "c": "47.09", "f": "43.95", "d": "37.68", "p": "78.49"},
-        {"m": "ENDO TENSAGE CONT. ILUMINADOR", "c": "29.09", "f": "27.15", "d": "23.28", "p": "48.49"},
-        {"m": "ENDO TENSAGE CREAM 30 ML", "c": "26.99", "f": "25.19", "d": "21.60", "p": "44.99"},
-        {"m": "ENDO TENSAGE NOURISHING CREAM Tx50ml", "c": "29.09", "f": "27.15", "d": "23.28", "p": "48.49"},
-        {"m": "ENDO TENSAGE SERUM 30 ML", "c": "30.29", "f": "28.27", "d": "24.24", "p": "50.49"},
-        {"m": "ENDO RENEWAL CONTORNO DE OJOS FX15ML", "c": "34.19", "f": "31.91", "d": "27.39", "p": "56.99"},
-        {"m": "ENDOCARE RENEWAL RETINOL SERUM", "c": "43.79", "f": "40.87", "d": "35.04", "p": "72.99"},
-        {"m": "ENDOCARE RENEWAL RETINOL INTENSIVE SERUM", "c": "46.79", "f": "43.67", "d": "37.44", "p": "77.99"},
-        {"m": "ENDOCARE RENEWAL COMFORT CREAM", "c": "26.99", "f": "25.19", "d": "21.60", "p": "44.99"},
-        
-        // CANTABRIA - HELIOCARE (27 productos)
-        {"m": "HELIO 360 MD AK FLUID TUBO X 50ML", "c": "23.69", "f": "22.11", "d": "18.96", "p": "39.49"},
-        {"m": "HELIO 360 GEL OIL FREE SPF50 50ML", "c": "23.09", "f": "21.55", "d": "18.48", "p": "38.49"},
-        {"m": "HELIO 360 MINERAL TOLERANCE SPF50 50 ML", "c": "23.69", "f": "22.11", "d": "18.96", "p": "39.49"},
-        {"m": "HELIO CAPSULAS ORAL F X 60ML", "c": "23.69", "f": "22.11", "d": "18.96", "p": "39.49"},
-        {"m": "HELIOCARE 360° BODY GLOW X 100ML", "c": "25.79", "f": "24.07", "d": "20.64", "p": "42.99"},
-        {"m": "HELIO 360º COLOR GEL OIL FREE BEIGE T X 50ML", "c": "23.69", "f": "22.11", "d": "18.96", "p": "39.49"},
-        {"m": "HELIO 360º COLOR GEL OIL FREE BRONZE T X 50ML", "c": "23.69", "f": "22.11", "d": "18.96", "p": "39.49"},
-        {"m": "HELIO 360° COMPACT OIL FREE PEARL 10g", "c": "23.99", "f": "22.39", "d": "19.20", "p": "39.99"},
-        {"m": "HELIO 360° COMPACT OIL FREE BEIGE 10g", "c": "23.99", "f": "22.39", "d": "19.20", "p": "39.99"},
-        {"m": "HELIO 360° COMPACT OIL FREE BRONZE 10g", "c": "23.99", "f": "22.39", "d": "19.20", "p": "39.99"},
-        {"m": "HELIO 360 SENSATION SPF50+ FX50ML", "c": "23.99", "f": "22.39", "d": "19.20", "p": "39.99"},
-        {"m": "HELIOCARE 360º PEDIATRICS TRANSPARENT SPRAY F X 200ML", "c": "24.89", "f": "23.23", "d": "19.92", "p": "41.49"},
-        {"m": "HELIO 360º AGE ACTIVE FLUID TUBO X 50ML", "c": "23.69", "f": "22.11", "d": "18.96", "p": "39.49"},
-        {"m": "HELIO 360° PEDIATRICS MINERAL SPF50+ Fx50mL", "c": "20.39", "f": "19.03", "d": "16.32", "p": "33.99"},
-        {"m": "HELIO 360° PIGMENT SOLUTION FLUID F X 50ml", "c": "23.69", "f": "22.11", "d": "18.96", "p": "39.49"},
-        {"m": "HELIO 360° WATER GEL SPF50+ Fx50mL", "c": "23.09", "f": "21.55", "d": "18.48", "p": "38.49"},
-        {"m": "HELIO 360° WATER GEL COLOR BEIGE FX50ML", "c": "24.59", "f": "22.95", "d": "19.68", "p": "40.99"},
-        {"m": "HELIO 360° WATER GEL COLOR BRONZE FX50ML", "c": "24.59", "f": "22.95", "d": "19.68", "p": "40.99"},
-        {"m": "HELIO .360° SPORT STICK", "c": "23.99", "f": "22.39", "d": "19.20", "p": "39.99"},
-        {"m": "HELIO .360° PEDIATRICS STICK", "c": "23.99", "f": "22.39", "d": "19.20", "p": "39.99"},
-        {"m": "HELIO 360° ACNIMAT 50ML", "c": "26.99", "f": "25.19", "d": "21.60", "p": "44.99"},
-        {"m": "HELIOCARE 360 ADVANCED GEL 250ML", "c": "25.19", "f": "23.51", "d": "20.16", "p": "41.99"},
-        {"m": "HELIO COLOR GELCREAM LIGHT", "c": "20.39", "f": "19.03", "d": "16.32", "p": "33.99"},
-        {"m": "HELIO SPF50 SPRAY 200 ML", "c": "23.69", "f": "22.11", "d": "18.96", "p": "39.49"},
-        {"m": "HELIO SPF90 GEL ULT 50ML", "c": "20.39", "f": "19.03", "d": "16.32", "p": "33.99"},
-        {"m": "HELIOCARE 360 MD A-R EMULSION", "c": "24.59", "f": "22.95", "d": "19.68", "p": "40.99"},
-        {"m": "HELIOCARE ULTRA D", "c": "27.59", "f": "25.75", "d": "22.08", "p": "45.99"},
-        
-        // CANTABRIA - IRALTONE (13 productos)
-        {"m": "IRALTONE CHAMPÚ DS TUBO X 200ML", "c": "19.19", "f": "17.91", "d": "15.36", "p": "31.99"},
-        {"m": "IRALTONE LOCION ANTICAÍDA", "c": "25.19", "f": "23.51", "d": "20.16", "p": "41.99"},
-        {"m": "IRALTONE SERUM 2 EN 1 PESTAÑAS FX10ML", "c": "32.99", "f": "30.79", "d": "26.40", "p": "54.99"},
-        {"m": "IRALTONE CHAMPÚ FORTIFICANTE TUBO X 200ML", "c": "14.99", "f": "13.99", "d": "12.00", "p": "24.99"},
-        {"m": "IRALTONE CHAMPÚ FORTIFICANTE TUBO X 400ML", "c": "25.19", "f": "23.51", "d": "20.16", "p": "41.99"},
-        {"m": "IRALTONE CHAMPÚ SEBO-REGULADOR TUBO X 200ML", "c": "17.99", "f": "16.79", "d": "14.40", "p": "29.99"},
-        {"m": "IRALTONE CHAMPÚ SUAVE USO FRECUENTE FX 200ML", "c": "13.99", "f": "12.99", "d": "12.00", "p": "24.99"},
-        {"m": "IRALTONE DS GEL TUBO X 50ML", "c": "16.79", "f": "15.67", "d": "13.44", "p": "27.99"},
-        {"m": "IRALTONE BARRIER COMFORT SHAMPOO Fx250ML", "c": "26.39", "f": "24.63", "d": "21.12", "p": "43.99"},
-        {"m": "IRALTONE PERFECT10 LEAVE-IN Fx150mL", "c": "20.99", "f": "19.59", "d": "16.80", "p": "34.99"},
-        {"m": "IRALTONE RESET DEEP-CLEANSING SHAMPOO Fx250mL", "c": "26.39", "f": "24.63", "d": "21.12", "p": "43.99"},
-        {"m": "IRALTONE RESTORE CONDITIONER Fx200mL", "c": "28.79", "f": "26.87", "d": "23.04", "p": "47.99"},
-        {"m": "IRALTONE SUBLIME HAIR REPAIR OIL Fx50mL", "c": "23.39", "f": "21.83", "d": "18.72", "p": "38.99"},
-        
-        // CANTABRIA - NEORETIN (5 productos)
-        {"m": "NEORETIN DC SENSITIVE AREAS BODY LOTION FX100ML", "c": "29.99", "f": "27.99", "d": "24.00", "p": "49.99"},
-        {"m": "NEORETIN DISC. SERUM FLUID 30ML", "c": "30.29", "f": "28.27", "d": "24.24", "p": "50.49"},
-        {"m": "NEORETIN PIGMENT NEUTRALIZER SERUM FX30ML", "c": "29.39", "f": "27.29", "d": "25.20", "p": "52.49"},
-        {"m": "NEORETIN DISC.GELCREAM SPF50 40ML", "c": "26.99", "f": "25.19", "d": "21.60", "p": "44.99"},
-        {"m": "NEORETIN ULTRA EMULSION FX30ML", "c": "40.49", "f": "37.79", "d": "32.40", "p": "67.49"},
-        
-        // CANTABRIA - KITS y SKIN RESIST (6 productos)
-        {"m": "KIT BIRETIX ANTI-ACNÉ", "c": "31.79", "f": "31.79", "d": "31.79", "p": "52.99"},
-        {"m": "KIT ENDOCARE TRATAMIENTO ANTIEDAD", "c": "47.14", "f": "47.14", "d": "47.14", "p": "74.99"},
-        {"m": "KIT PROTECTOR SOLAR HELIOCARE", "c": "30.96", "f": "30.96", "d": "30.96", "p": "50.49"},
-        {"m": "SKIN RESIST DAILY FLUID 50ML", "c": "25.79", "f": "24.07", "d": "20.64", "p": "42.99"},
-        {"m": "SKIN RESIST SENSAGE SERUM 30ML", "c": "31.19", "f": "29.11", "d": "24.96", "p": "51.99"},
-        {"m": "SKIN RESIST VELVET CLEANSER 200ML", "c": "20.99", "f": "19.59", "d": "16.80", "p": "34.99"},
-        
-        // LABORATORIOS VIÑAS - BELCILS (7 productos)
-        {"m": "BELCILS ESPUMA LIMPIADORA 50 ML.", "c": "15.59", "f": "14.55", "d": "12.48", "p": "25.99"},
-        {"m": "BELCILS CR. REGENERADORA INTENSIVA 4 ML.", "c": "19.79", "f": "18.47", "d": "15.84", "p": "32.99"},
-        {"m": "BELCILS ROLL-ON DESESTRESANTE", "c": "19.19", "f": "17.91", "d": "15.36", "p": "31.99"},
-        {"m": "BELCILS LÁPIZ TEXTURA CREMOSA- NEGRO", "c": "11.99", "f": "11.19", "d": "9.60", "p": "19.99"},
-        {"m": "BELCILS LÁPIZ TEXTURA CREMOSA- MARRON", "c": "11.99", "f": "11.19", "d": "9.60", "p": "19.99"},
-        {"m": "BELCILS MASCARA EXTRA VOLUMEN", "c": "25.19", "f": "23.51", "d": "20.16", "p": "41.99"},
-        {"m": "BELCILS CORRECTOR INVISIBLE.", "c": "23.39", "f": "21.83", "d": "18.72", "p": "38.99"},
-        
-        // LABORATORIOS VIÑAS - EMOLIENTA y otros (13 productos)
-        {"m": "BLEFARIX. 50 TOALLITAS", "c": "23.39", "f": "21.83", "d": "18.72", "p": "38.99"},
-        {"m": "EMOLIENTA LABIOS TUBO X 15ML", "c": "8.39", "f": "7.83", "d": "6.72", "p": "13.99"},
-        {"m": "EMOLIENTA NASAL TUBO X 10ML", "c": "8.39", "f": "7.83", "d": "6.72", "p": "13.99"},
-        {"m": "EMOLIENTA EMULSION FLUIDA EMULSION FX400ML", "c": "31.79", "f": "29.67", "d": "25.44", "p": "52.99"},
-        {"m": "EMOLIENTA UÑAS TUBO X15ML", "c": "11.99", "f": "11.19", "d": "9.60", "p": "19.99"},
-        {"m": "EMOLIENTA PALPEBRAL CREMA TUBO X10ML", "c": "14.99", "f": "13.99", "d": "12.00", "p": "24.99"},
-        {"m": "EMOLIENTA QP CREMA TUBO X300ML", "c": "34.19", "f": "31.91", "d": "27.36", "p": "56.99"},
-        {"m": "EMOLIENTA MANOS. 50 ML.", "c": "11.99", "f": "11.19", "d": "9.60", "p": "19.99"},
-        {"m": "HIPOSODUL ROLL-ON BOTELLA FX50ML", "c": "11.99", "f": "11.19", "d": "9.60", "p": "19.99"},
-        {"m": "SALTRATOS DB TUBO X 100ML", "c": "16.79", "f": "15.59", "d": "14.40", "p": "29.99"},
-        {"m": "ROSADERM. 30 ML.", "c": "19.79", "f": "18.47", "d": "15.84", "p": "32.99"},
-        {"m": "ROSADERM FAST. 30ML.", "c": "21.59", "f": "20.15", "d": "17.28", "p": "35.99"},
-        {"m": "HIPOSUDOL SPRAY. 100ML", "c": "17.99", "f": "16.79", "d": "14.40", "p": "29.99"}
-      ];
+(() => {
+  'use strict';
+  const DATA = [{"id":"21AG","m":"ADEMIN GOT. PED. F X 15ml.","linea":"LÍNEA GAMMA","c":"3.35","f":"2.88","d":"2.60","p":"5.99"},{"id":"11AG","m":"AZTHOMAC 200mg/5ml. Polv. P/S. F X 15ml","linea":"LÍNEA GAMMA","c":"5.03","f":"3.50","d":"3.00","p":"8.99"},{"id":"18AG","m":"AZTHOMAC 200mg/5ml. Polv. P/S. F X 30ml","linea":"LÍNEA GAMMA","c":"8.95","f":"5.81","d":"4.93","p":"15.99"},{"id":"13AG","m":"AZTHOMAC 500mg. Caps. C X 3","linea":"LÍNEA GAMMA","c":"4.90","f":"4.68","d":"4.41","p":"8.75"},{"id":"15AG","m":"AZTHOMAC 500mg. Caps. C X 5","linea":"LÍNEA GAMMA","c":"8.00","f":"5.30","d":"5.00","p":"14.29"},{"id":"23AG","m":"AZTHOMAC 500mg. Caps. Disp. X 25 Cápsulas","linea":"LÍNEA GAMMA","c":"32.49","f":"22.50","d":"18.75","p":"58.02"},{"id":"28AG","m":"ANGUS SOLUCIÓN ORAL CX15 X 15mL","linea":"LÍNEA GAMMA","c":"9.60","f":"6.40","d":"6.40","p":"19.99"},{"id":"01BG","m":"BACTEL COMPUESTO Susp. F X 15ml","linea":"LÍNEA GAMMA","c":"5.11","f":"4.38","d":"3.65","p":"9.13"},{"id":"05BG","m":"B-12 GAMMA JARABE CAJA X 15 FRASCOS X 15ml","linea":"LÍNEA GAMMA","c":"8.40","f":"4.40","d":"4.40","p":"15.00"},{"id":"68CG","m":"CALCIGAM SUSP.ORAL Cx 15 F X 15 ML","linea":"LÍNEA GAMMA","c":"8.68","f":"4.95","d":"4.95","p":"15.50"},{"id":"04GU","m":"CEFTRIGAM 1g P/P/S Inyectable CX1","linea":"LÍNEA GAMMA","c":"5.00","f":"3.20","d":"3.20","p":"11.65"},{"id":"03GU","m":"CEFIGAM (Cefixima) 400mg Comprimidos CX10","linea":"LÍNEA GAMMA","c":"16.79","f":"7.00","d":"7.00","p":"29.99"},{"id":"08GU","m":"CEFIGAM (Cefixima) 100mg Polvo Para Susp. Fx50ml","linea":"LÍNEA GAMMA","c":"7.77","f":"6.66","d":"5.55","p":"13.88"},{"id":"11CI","m":"CIPROFLOXACINA 500mg. Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"65.00","f":"65.00","d":"65.00","p":null},{"id":"26CG","m":"CIPROFLOXACINA 500mg. Tab. C X 100","linea":"LÍNEA GAMMA","c":"8.10","f":"8.10","d":"8.10","p":"65.00"},{"id":"42CG","m":"CIPROP (CIPROHEPTADINA) 2mg/5ml Jarabe F X 120ml (VIDRIO)","linea":"LÍNEA GAMMA","c":"5.77","f":"5.77","d":"5.77","p":"10.31"},{"id":"35CG","m":"CIPROP FORTE Jbe. F X 240ml (VIDRIO)","linea":"LÍNEA GAMMA","c":"7.90","f":"7.90","d":"7.90","p":"14.11"},{"id":"61CG","m":"CIPROP 2mg/5mL Jarabe C X 15 FRASCOS","linea":"LÍNEA GAMMA","c":"10.63","f":"9.87","d":"9.12","p":"18.99"},{"id":"65CI","m":"CLID NF Tab. Recubierta Bo. X 1000","linea":"LÍNEA GAMMA","c":"37.00","f":"37.00","d":"37.00","p":null},{"id":"39CG","m":"CLID NF Tab. Recubierta C X 100","linea":"LÍNEA GAMMA","c":"6.25","f":"6.25","d":"6.25","p":"27.50"},{"id":"47CG","m":"CLOBAGAMM 10mg TABLETAS CX30","linea":"LÍNEA GAMMA","c":"6.90","f":"6.90","d":"6.90","p":"12.34"},{"id":"07CG","m":"CLOMAZOL 1% CREMA TOP. Tu. X 20g","linea":"LÍNEA GAMMA","c":"2.35","f":"2.35","d":"2.35","p":"3.99"},{"id":"51CG","m":"CLOMAZOL V 1% CREMA VAG. Tu. X 35g","linea":"LÍNEA GAMMA","c":"3.91","f":"3.00","d":"2.80","p":"6.99"},{"id":"44CI","m":"CLORFENIRAMINA 8mg. Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"21.25","f":"21.25","d":"21.25","p":null},{"id":"25CG","m":"CLORFENIRAMINA 8mg. Tab. C X 100","linea":"LÍNEA GAMMA","c":"2.45","f":"2.45","d":"2.45","p":"14.99"},{"id":"45CI","m":"CLORFENIRAMINA Jbe. 2mg/5ml. F X 120ml. S/C (PET)","linea":"LÍNEA GAMMA","c":"1.95","f":"1.00","d":"1.00","p":"3.49"},{"id":"37CG","m":"CODEFORT Tab. C X 100","linea":"LÍNEA GAMMA","c":"20.72","f":"20.72","d":"20.72","p":"68.49"},{"id":"38CG","m":"CODEFORT Tab. C X 20","linea":"LÍNEA GAMMA","c":"7.67","f":"6.35","d":"5.99","p":"13.70"},{"id":"16CG","m":"COLIRIO NAFAZOLINA F X 15ml","linea":"LÍNEA GAMMA","c":"2.40","f":"1.60","d":"1.40","p":"4.29"},{"id":"36CG","m":"COMFORT SPM CX20 Grageas y 20 cápsulas","linea":"LÍNEA GAMMA","c":"5.60","f":"5.20","d":"4.80","p":"10.00"},{"id":"31CG","m":"COMPLEJO B Tab. C X 100","linea":"LÍNEA GAMMA","c":"9.52","f":"3.00","d":"2.30","p":"17.00"},{"id":"17CI","m":"COMPLEJO B Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"25.00","f":"25.00","d":"25.00","p":null},{"id":"60CG","m":"CONJUNTIVAL 0.3% SOLUCION OFTÁLMICA F X 5ML","linea":"LÍNEA GAMMA","c":"4.47","f":"4.15","d":"3.84","p":"7.99"},{"id":"19CG","m":"CORITOS Jbe. F X 120ml.","linea":"LÍNEA GAMMA","c":"5.59","f":"3.00","d":"3.00","p":"9.99"},{"id":"17CG","m":"CORITOS NF GOT. PED. F X 30ml.","linea":"LÍNEA GAMMA","c":"5.59","f":"4.21","d":"4.21","p":"9.99"},{"id":"08DG","m":"D.D.F.-3 CREMA TOP. Tu. X 20g","linea":"LÍNEA GAMMA","c":"4.61","f":"3.00","d":"2.70","p":"8.23"},{"id":"13DG","m":"D.D.F.-3 CREMA TOP. Tu. X 30g","linea":"LÍNEA GAMMA","c":"7.41","f":"5.30","d":"5.00","p":"13.24"},{"id":"24DG","m":"DIPROFIL 6.67mg/ ml. JARABE . F X 240 MLVIDRIO","linea":"LÍNEA GAMMA","c":"8.39","f":"7.79","d":"7.20","p":"14.99"},{"id":"12DG","m":"DER-AL ALIVIA PICADURAS CREMA Tu. X 20g","linea":"LÍNEA GAMMA","c":"6.15","f":"5.98","d":"5.39","p":"10.99"},{"id":"05DG","m":"DOLEFRIN 100mg/5ml. Susp. F X 120ml.","linea":"LÍNEA GAMMA","c":"2.51","f":"1.90","d":"1.75","p":"5.75"},{"id":"20DI","m":"DOLEFRIN 400mg. Caps. Bo. X 1000","linea":"LÍNEA GAMMA","c":"75.00","f":"75.00","d":"75.00","p":null},{"id":"02EU","m":"ELETÍN 200mg Cápsulas F x 60","linea":"LÍNEA GAMMA","c":"11.75","f":"10.91","d":"10.08","p":"20.99"},{"id":"01EG","m":"ENTEROGAMMA Susp. F X 120ml.","linea":"LÍNEA GAMMA","c":"4.75","f":"3.79","d":"3.05","p":"8.48"},{"id":"19FI","m":"FLAZOL 500mg. Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"35.27","f":"35.27","d":"35.27","p":null},{"id":"35FG","m":"FLUCONAZOL GAMMA 150mg CAJA X 10","linea":"LÍNEA GAMMA","c":"14.40","f":"5.50","d":"3.90","p":"30.00"},{"id":"11FG","m":"FOLHEM 5mg. Tab. C X 30","linea":"LÍNEA GAMMA","c":"2.79","f":"2.19","d":"1.86","p":"4.99"},{"id":"05FG","m":"FOLHEM C/HIERRO ELIXIR F X 120ml.","linea":"LÍNEA GAMMA","c":"5.31","f":"4.00","d":"3.40","p":"9.49"},{"id":"19FG","m":"FOLHEM ELIXIR CAJA X 15 FRASCO X 15ml.","linea":"LÍNEA GAMMA","c":"8.68","f":"4.75","d":"4.75","p":"15.50"},{"id":"37FG","m":"FLUDICAR 50 mg/ml JARABE C X 15FX 15ml","linea":"LÍNEA GAMMA","c":"7.55","f":"7.01","d":"6.48","p":"13.49"},{"id":"32FG","m":"FLUDICAR 50 mg/ml.Jbe. F X 120 ml (VIDRIO)","linea":"LÍNEA GAMMA","c":"3.91","f":"3.63","d":"3.36","p":"6.99"},{"id":"42GG","m":"GAMMA CLARITRO 250mg/5mL Polv. P/SUSP.ORAL FX60ml","linea":"LÍNEA GAMMA","c":"10.36","f":"8.88","d":"7.40","p":"18.50"},{"id":"33GG","m":"GAMMACORT Jbe. F X 120ml.","linea":"LÍNEA GAMMA","c":"6.69","f":"6.21","d":"5.74","p":"11.95"},{"id":"01CH","m":"GAMMACORT IP 320/9 µg PPI, CÁPS. F X 60 + INHALADOR","linea":"LÍNEA GAMMA","c":"27.99","f":"25.99","d":"23.99","p":"49.99"},{"id":"54GG","m":"GAMMAFLUX SUSP. P/INH. NASAL 120 APLIC. F X 8ml","linea":"LÍNEA GAMMA","c":"11.19","f":"9.59","d":"8.00","p":"19.99"},{"id":"36GG","m":"GAMMALAX 10g/15ml Solución F X 120ml","linea":"LÍNEA GAMMA","c":"6.15","f":"5.28","d":"4.40","p":"10.99"},{"id":"39GG","m":"GAMMALAX 10g/15ml Solución F X 240ml","linea":"LÍNEA GAMMA","c":"11.19","f":"9.60","d":"8.00","p":"19.99"},{"id":"86GG","m":"GAMMALER 2mg/5ml JARABE F X 240ml","linea":"LÍNEA GAMMA","c":"5.59","f":"4.79","d":"3.99","p":"9.99"},{"id":"64GG","m":"GAMMALER OFTALMO SOLUCIÓN OFTALMICA FX15ML","linea":"LÍNEA GAMMA","c":"3.91","f":"3.63","d":"3.36","p":"6.99"},{"id":"11GG","m":"GAMMAMINERAL Jbe. F X 120ml","linea":"LÍNEA GAMMA","c":"5.59","f":"4.80","d":"4.00","p":"9.99"},{"id":"24GG","m":"GAMMAMINERAL Jbe. F X 240ml","linea":"LÍNEA GAMMA","c":"8.67","f":"7.44","d":"6.20","p":"15.49"},{"id":"82GG","m":"GAMMAMINERAL L C X 15 FRASCOS X 15ml","linea":"LÍNEA GAMMA","c":"8.96","f":"5.10","d":"5.10","p":"16.00"},{"id":"70GG","m":"GAMMATRIL 2.5MG/ML SOLUCION ORAL GOTAS FX30ML","linea":"LÍNEA GAMMA","c":"6.71","f":"6.71","d":"6.71","p":"11.99"},{"id":"88GG","m":"GAMMATRIL 2MG TABLETAS CAJA X30 TABLETAS","linea":"LÍNEA GAMMA","c":"3.64","f":"3.64","d":"3.64","p":"6.50"},{"id":"87GG","m":"GAMMATRIL 2MG TABLETAS CAJA X100 TABLETAS","linea":"LÍNEA GAMMA","c":"11.20","f":"11.20","d":"11.20","p":"20.00"},{"id":"44GG","m":"GAMMATOS ANTITUSIVO Jbe. F X 120ml","linea":"LÍNEA GAMMA","c":"7.04","f":"7.04","d":"7.04","p":"12.58"},{"id":"43GG","m":"GAMMATOS ANTITUSIVO Jbe. F X 240ml","linea":"LÍNEA GAMMA","c":"9.83","f":"9.83","d":"9.83","p":"17.56"},{"id":"27GG","m":"GAMMATOS EXPECT. FCO. GOTERO F X 30ml","linea":"LÍNEA GAMMA","c":"3.35","f":"2.44","d":"2.07","p":"5.99"},{"id":"07GG","m":"GAMMATOS EXPECT. Jbe. F X 120ml","linea":"LÍNEA GAMMA","c":"5.79","f":"5.79","d":"5.79","p":"10.33"},{"id":"26GG","m":"GAMMATOS EXPECT. Jbe. F X 240ml","linea":"LÍNEA GAMMA","c":"8.95","f":"8.95","d":"8.95","p":"15.99"},{"id":"71GG","m":"GAMMAZINC Jbe. F X 120ml","linea":"LÍNEA GAMMA","c":"5.59","f":"4.80","d":"4.00","p":"9.99"},{"id":"20GG","m":"GAMMAZINC Jbe. F X 240ml","linea":"LÍNEA GAMMA","c":"7.25","f":"6.22","d":"5.18","p":"12.95"},{"id":"13GU","m":"GAMMOXIL S POLVO PARA SUSPENSIÓN F X 90ml","linea":"LÍNEA GAMMA","c":"18.47","f":"17.15","d":"15.84","p":"32.99"},{"id":"28GG","m":"GLIBENCLAMIDA 5mg. Tab. C X 100","linea":"LÍNEA GAMMA","c":"2.99","f":"2.99","d":"2.99","p":"14.99"},{"id":"22GG","m":"GLICERINA FENICADA GOT. PED. F X 15ml.","linea":"LÍNEA GAMMA","c":"2.11","f":"1.30","d":"1.30","p":"3.76"},{"id":"40GI","m":"GLICERINA OTICA GOT. PED. F X 15ml.","linea":"LÍNEA GAMMA","c":"2.11","f":"1.00","d":"1.00","p":"3.76"},{"id":"07HG","m":"HEMATOFULL CAJA X 15 FRASCOS X 15ml","linea":"LÍNEA GAMMA","c":"8.40","f":"4.40","d":"4.40","p":"15.00"},{"id":"01HG","m":"HIDROCORTISONA 1% CREMA TOP. Tu. X 15g","linea":"LÍNEA GAMMA","c":"2.38","f":"2.00","d":"2.00","p":"4.25"},{"id":"08IG","m":"IPRAMIST SPRAY NASAL F X 15ml/200 Aplicaciones","linea":"LÍNEA GAMMA","c":"8.95","f":"7.68","d":"6.40","p":"15.99"},{"id":"09IG","m":"IPRAMIST-N 250mcg/mL Fco. Gotero F X 20ML","linea":"LÍNEA GAMMA","c":"5.03","f":"4.32","d":"3.60","p":"8.99"},{"id":"10IG","m":"IPRAMIST-N 750mcg/mL Fco. Gotero F X 20ML","linea":"LÍNEA GAMMA","c":"10.07","f":"8.64","d":"7.20","p":"17.99"},{"id":"06IG","m":"IREN FORTE F X 120ml.","linea":"LÍNEA GAMMA","c":"12.11","f":"11.12","d":"10.49","p":"21.62"},{"id":"13IG","m":"IREN FORTE JARABE CX15 FRASCOS DE 10ML","linea":"LÍNEA GAMMA","c":"14.70","f":"12.60","d":"10.50","p":"26.25"},{"id":"03KG","m":"KAOPEXIN C/NEO. Susp. F X 120ml.","linea":"LÍNEA GAMMA","c":"4.17","f":"3.87","d":"3.57","p":"7.44"},{"id":"01KG","m":"KAOPEXIN Susp. F X 120ml.","linea":"LÍNEA GAMMA","c":"4.47","f":"2.30","d":"1.85","p":"7.99"},{"id":"05KG","m":"KESAN-G 2% CREMA TOP. Tu. X 15g","linea":"LÍNEA GAMMA","c":"2.19","f":"2.10","d":"2.10","p":"3.91"},{"id":"18LG","m":"LANTRIX CREMA VAGINAL TUBO X 50g","linea":"LÍNEA GAMMA","c":"11.19","f":"10.39","d":"9.60","p":"19.99"},{"id":"01GU","m":"LEVOGAM 500MG COMPRIMIDOS C X 10","linea":"LÍNEA GAMMA","c":"14.00","f":"5.00","d":"5.00","p":"25.00"},{"id":"02GU","m":"LEVOGAM 750MG COMPRIMIDOS C X 10","linea":"LÍNEA GAMMA","c":"22.40","f":"6.50","d":"6.50","p":"40.00"},{"id":"15LG","m":"LYVERA 300MG CAPSULAS C X 100","linea":"LÍNEA GAMMA","c":"28.00","f":"24.00","d":"20.00","p":"50.00"},{"id":"16LG","m":"LYVERA 300MG CAPSULAS C X 10","linea":"LÍNEA GAMMA","c":"2.80","f":"2.40","d":"2.00","p":"5.00"},{"id":"14LI","m":"LORALER 10mg. Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"40.47","f":"40.47","d":"40.47","p":null},{"id":"08LG","m":"LORALER 10mg. Tab. C X 100","linea":"LÍNEA GAMMA","c":"4.05","f":"4.05","d":"4.05","p":"39.99"},{"id":"11MG","m":"MEDIFLU Jbe. F X 120ml.","linea":"LÍNEA GAMMA","c":"5.76","f":"5.10","d":"4.93","p":"10.28"},{"id":"15MG","m":"MEDIFLU GOTAS PEDIÁTRICAS FRASCO X 30ml","linea":"LÍNEA GAMMA","c":"4.47","f":"4.15","d":"3.84","p":"7.99"},{"id":"02MG","m":"METOCARBAMOL 500mg. Tab. C X 100","linea":"LÍNEA GAMMA","c":"5.00","f":"5.00","d":"5.00","p":"25.99"},{"id":"06MI","m":"METOCARBAMOL Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"40.00","f":"40.00","d":"40.00","p":null},{"id":"20MI","m":"MULTIVITAMINAS Jbe. F X 120ml. (PET)","linea":"LÍNEA GAMMA","c":"1.95","f":"1.07","d":"1.07","p":"3.49"},{"id":"09MI","m":"MULTIVITAMINAS Tab. Recubierta Bo. X 1000","linea":"LÍNEA GAMMA","c":"28.00","f":"28.00","d":"28.00","p":null},{"id":"03MG","m":"MULTIVITAMINAS Tab. Recubierta C X 50","linea":"LÍNEA GAMMA","c":"2.25","f":"2.25","d":"2.25","p":"9.83"},{"id":"21MG","m":"MULTIVITAMINAS JBE CAJA X 15 FRASCOS DE 15ml","linea":"LÍNEA GAMMA","c":"8.40","f":"4.40","d":"4.40","p":"15.00"},{"id":"04MG","m":"MULTIVITAMINAS Tab. Recubierta C X 100","linea":"LÍNEA GAMMA","c":"11.20","f":"3.30","d":"2.60","p":"20.00"},{"id":"04NG","m":"NEOBAN UNG. Tu. X 15g","linea":"LÍNEA GAMMA","c":"3.80","f":"1.95","d":"1.95","p":"6.79"},{"id":"06NG","m":"NINE MULTIV. PRENAT. CX30 Tab. Recubierta","linea":"LÍNEA GAMMA","c":"5.71","f":"4.46","d":"3.58","p":"10.20"},{"id":"04NI","m":"NOXAT 5mg. Tab. Recubierta Bo. X 1000","linea":"LÍNEA GAMMA","c":"48.51","f":"48.51","d":"48.51","p":null},{"id":"02NG","m":"NOXAT 5mg. Tab. Recubierta C X 100","linea":"LÍNEA GAMMA","c":"4.85","f":"4.85","d":"4.85","p":"24.99"},{"id":"03NG","m":"NOXAT 5mg/ml. GOT. PED. F X 30ml.","linea":"LÍNEA GAMMA","c":"4.60","f":"2.25","d":"1.95","p":"6.57"},{"id":"13PG","m":"PASTA LASSAR ADULTOS Ta. X 250g","linea":"LÍNEA GAMMA","c":"6.05","f":"6.00","d":"6.00","p":"10.80"},{"id":"07PG","m":"PASTA LASSAR CREMA TOP. Ta. X 250g","linea":"LÍNEA GAMMA","c":"6.10","f":"5.80","d":"5.80","p":"10.88"},{"id":"08PG","m":"PASTA LASSAR CREMA TOP. Ta. X 500g","linea":"LÍNEA GAMMA","c":"9.30","f":"9.25","d":"9.25","p":"16.60"},{"id":"06PG","m":"PASTA LASSAR CREMA TOP. Ta. X 80g","linea":"LÍNEA GAMMA","c":"3.61","f":"3.52","d":"3.40","p":"6.45"},{"id":"15PI","m":"PREDSOLAN 5mg. Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"46.10","f":"46.10","d":"46.10","p":null},{"id":"11PG","m":"PREDSOLAN 5mg. Tab. C X 100","linea":"LÍNEA GAMMA","c":"4.61","f":"4.61","d":"4.61","p":"25.99"},{"id":"20PG","m":"PREDSOLAN 20mg. Tab. C X 100","linea":"LÍNEA GAMMA","c":"22.40","f":"19.20","d":"16.00","p":"40.00"},{"id":"21PG","m":"PREDSOLAN 50mg. Tab. C X 100","linea":"LÍNEA GAMMA","c":"30.80","f":"26.40","d":"22.00","p":"55.00"},{"id":"31PG","m":"PREDSOLAN 15mg/5ml JARABE 120ML","linea":"LÍNEA GAMMA","c":"8.95","f":"8.31","d":"7.68","p":"15.99"},{"id":"04QI","m":"QUIXANID 500mg. Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"76.99","f":"76.99","d":"76.99","p":null},{"id":"03QG","m":"QUIXANID 500mg. Tab. C X 30","linea":"LÍNEA GAMMA","c":"3.91","f":"3.40","d":"3.40","p":"6.99"},{"id":"04RG","m":"RESPIREX 0.5mg/ml SOLUCION SPRAY NASAL Fx30ml","linea":"LÍNEA GAMMA","c":"3.80","f":"3.26","d":"2.72","p":"6.79"},{"id":"06RG","m":"RESPIREX PEDIATRICO GOTAS NASALES Fx15ml","linea":"LÍNEA GAMMA","c":"2.79","f":"2.40","d":"2.00","p":"4.99"},{"id":"08RG","m":"RINOTAPP FLU TABLETAS C X 100","linea":"LÍNEA GAMMA","c":"16.79","f":"5.50","d":"5.50","p":"29.99"},{"id":"07RG","m":"RINOTAPP FLU TABLETAS C X 20","linea":"LÍNEA GAMMA","c":"6.15","f":"2.25","d":"2.25","p":"10.99"},{"id":"01RG","m":"RINOTAPP Jbe. F X 120ml.","linea":"LÍNEA GAMMA","c":"5.75","f":"5.34","d":"5.34","p":"10.28"},{"id":"62SI","m":"S.S.N. GOT. PED. F X 240ml.","linea":"LÍNEA GAMMA","c":"3.46","f":"3.40","d":"3.21","p":"6.18"},{"id":"24SG","m":"S.S.N. GOT. PED. F X 30ml.","linea":"LÍNEA GAMMA","c":"2.31","f":"2.31","d":"2.00","p":"4.13"},{"id":"40SI","m":"S.S.N. GOT. PED. LITRO 1000ML","linea":"LÍNEA GAMMA","c":"7.51","f":"7.51","d":"7.51","p":"13.41"},{"id":"19SG","m":"S.S.N. SPRAY NASAL Susp. F X 50ml/500 Aplicaciones","linea":"LÍNEA GAMMA","c":"3.35","f":"2.88","d":"2.88","p":"5.99"},{"id":"30SG","m":"S.S.N. SPRAY NASAL Susp. F X 100ml/1000 Aplicaciones","linea":"LÍNEA GAMMA","c":"4.47","f":"3.84","d":"3.20","p":"7.99"},{"id":"20SG","m":"SINAIREX 100mg/ml. GOTAS F X 30ml.","linea":"LÍNEA GAMMA","c":"3.63","f":"2.90","d":"2.47","p":"6.49"},{"id":"05SU","m":"SINAPTIC CÁPSULAS F X 30","linea":"LÍNEA GAMMA","c":"16.79","f":"15.59","d":"15.00","p":"29.99"},{"id":"47SI","m":"SINTEMP 120mg/5ml. Jbe. F X 120ml. S/C (PET)","linea":"LÍNEA GAMMA","c":"1.84","f":"1.15","d":"1.15","p":"3.49"},{"id":"07SI","m":"SINTEMP 500mg. Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"25.00","f":"25.00","d":"25.00","p":"43.82"},{"id":"18SG","m":"SIRYALE SPRAY NASAL AD. Susp. 20g/150 Aplicaciones","linea":"LÍNEA GAMMA","c":"13.15","f":"12.21","d":"11.28","p":"23.49"},{"id":"21SG","m":"SIRYALE SPRAY NASAL INF. Susp. 10g/75 Aplicaciones","linea":"LÍNEA GAMMA","c":"8.77","f":"8.14","d":"7.52","p":"15.66"},{"id":"34SG","m":"SUPRETOS 35.4MG/5ML SUSPENSION FX120ML (VIDRIO)","linea":"LÍNEA GAMMA","c":"7.83","f":"7.27","d":"6.72","p":"13.99"},{"id":"27TI","m":"TENSAL TABLETAS 20MG B X 1000","linea":"LÍNEA GAMMA","c":"17.99","f":"17.99","d":"17.99","p":"355.25"},{"id":"32TG","m":"TIZAFLEX® 4mg Tab. C X 100","linea":"LÍNEA GAMMA","c":"10.00","f":"10.00","d":"10.00","p":"71.57"},{"id":"38TI","m":"TOXAZOL FORTE TABLETAS BOLSA X 1,000","linea":"LÍNEA GAMMA","c":"65.00","f":"65.00","d":"65.00","p":"750.20"},{"id":"08TG","m":"TOXAZOL Susp. F X 100ml.","linea":"LÍNEA GAMMA","c":"3.28","f":"2.81","d":"2.34","p":"5.85"},{"id":"23TG","m":"TRAUM GEL USO TOPICO Tu. X 35g","linea":"LÍNEA GAMMA","c":"3.91","f":"2.80","d":"2.52","p":"6.99"},{"id":"38TG","m":"TRICOZOL DUO CREMA VAGINAL Tu x 50g","linea":"LÍNEA GAMMA","c":"7.83","f":"7.27","d":"6.72","p":"13.99"},{"id":"40TG","m":"TRICOZOL DUO ORAL (1 B X 1 fluconazol 150mg+1BX4 tinidazol 500mg)","linea":"LÍNEA GAMMA","c":"7.81","f":"7.25","d":"6.70","p":"13.95"},{"id":"02TU","m":"TRIPTOFARM 200mg TABLETAS FX60","linea":"LÍNEA GAMMA","c":"25.19","f":"23.39","d":"21.60","p":"44.99"},{"id":"12ZI","m":"ZEBAN 500mg. Tab. Bo. X 1000","linea":"LÍNEA GAMMA","c":"85.00","f":"85.00","d":"85.00","p":null},{"id":"05ZG","m":"ZEBAN 500mg. Tab. C X 8","linea":"LÍNEA GAMMA","c":"1.60","f":"1.60","d":"1.60","p":"10.49"},{"id":"14ZG","m":"ZOST 5mg. CREMA TOP. Tu. X 5g","linea":"LÍNEA GAMMA","c":"2.79","f":"1.50","d":"1.50","p":"4.99"},{"id":"01CA","m":"Climaktolan Fx80 tab","linea":"DHU","c":"13.79","f":"13.79","d":"11.50","p":"22.99"},{"id":"01IA","m":"Immunokind Fx150 tab","linea":"DHU","c":"11.19","f":"11.19","d":"10.00","p":"19.99"},{"id":"02AU","m":"Alcázar D Fx60","linea":"ARNET-BELLEVIE","c":"7.20","f":"7.20","d":"6.00","p":"14.99"},{"id":"01PU","m":"Papaya Tabs Fx100","linea":"ARNET-BELLEVIE","c":"9.60","f":"9.60","d":"8.00","p":"19.99"},{"id":"02SU","m":"Serene Fx60","linea":"ARNET-BELLEVIE","c":"12.00","f":"12.00","d":"10.00","p":"24.99"},{"id":"04SU","m":"Sublime Tabletas Recubiertas Fx90","linea":"ARNET-BELLEVIE","c":"13.99","f":"10.00","d":"8.50","p":"24.99"},{"id":"01SU","m":"Sustenta Fx60","linea":"ARNET-BELLEVIE","c":"14.40","f":"14.40","d":"12.00","p":"29.99"},{"id":"01TU","m":"Terifem 250mg Cápsulas Fx30","linea":"ARNET-BELLEVIE","c":"8.39","f":"7.79","d":"7.20","p":"14.99"},{"id":"01VU","m":"Varicur Fx60","linea":"ARNET-BELLEVIE","c":"14.40","f":"14.40","d":"12.00","p":"29.99"},{"id":"86IF","m":"BIRETIX BARRA DERMATOLÓGICA 80g","linea":"CANTABRIA","c":"7.49","f":"6.99","d":"6.00","p":"12.49"},{"id":"87IF","m":"BIRETIX CLEANSER GEL LIMPIADOR F X 200ML","linea":"CANTABRIA","c":"14.69","f":"13.71","d":"11.76","p":"24.49"},{"id":"185IF","m":"BIRETIX CLEANSER GEL LIMPIADOR PURIFICANTE F X 400mL","linea":"CANTABRIA","c":"23.99","f":"22.39","d":"19.20","p":"39.99"},{"id":"01IF","m":"BIRETIX DUO 30 ML","linea":"CANTABRIA","c":"17.99","f":"16.79","d":"14.40","p":"29.99"},{"id":"157IF","m":"BIRETIX DOUBLE CORRECTION SERUM TX30ML","linea":"CANTABRIA","c":"34.19","f":"31.91","d":"27.36","p":"56.99"},{"id":"94IF","m":"BIRETIX FOCUS GEL Tx15ML","linea":"CANTABRIA","c":"13.37","f":"12.48","d":"10.70","p":"22.29"},{"id":"109IF","m":"BIRETIX ISOREPAIR CREMA HIDRATANTE TUBO X 50ML","linea":"CANTABRIA","c":"15.59","f":"14.55","d":"12.48","p":"25.99"},{"id":"113IF","m":"BIRETIX HYDRAMAT F X 50ML","linea":"CANTABRIA","c":"13.49","f":"12.59","d":"10.80","p":"22.49"},{"id":"05IF","m":"BIRETIX MICROPEEL 50 ML","linea":"CANTABRIA","c":"17.99","f":"16.79","d":"14.40","p":"29.99"},{"id":"129IF","m":"BIRETIX OIL CONTROL SOLUTION FX100ML","linea":"CANTABRIA","c":"16.79","f":"15.59","d":"14.40","p":"29.99"},{"id":"03IF","m":"BIRETX MASK 25ML","linea":"CANTABRIA","c":"16.79","f":"15.67","d":"13.44","p":"27.99"},{"id":"57IF","m":"BIRETIX TRI-ACTIVE GEL FRASCO X 50ML","linea":"CANTABRIA","c":"17.99","f":"16.79","d":"14.40","p":"29.99"},{"id":"71IF","m":"BIRETIX TRI-ACTIVE SPRAY Fx100ML","linea":"CANTABRIA","c":"20.09","f":"18.75","d":"16.08","p":"33.49"},{"id":"186IF","m":"BIRETIX ISOREPAIR BÁLSAMO LABIAL Tu.x10mL","linea":"CANTABRIA","c":"9.59","f":"8.95","d":"7.68","p":"15.99"},{"id":"134IF","m":"ENDO AGE BARRIER HYALUBOOST SERUM FX30ML","linea":"CANTABRIA","c":"38.99","f":"36.39","d":"31.20","p":"64.99"},{"id":"171IF","m":"ENDO AGE BARRIER HYALUBOOST CONTORNO OJOS 15ML","linea":"CANTABRIA","c":"23.99","f":"22.39","d":"19.20","p":"39.99"},{"id":"07IF","m":"ENDO AQUAFOAM LIMPIADOR 125ML","linea":"CANTABRIA","c":"16.79","f":"15.67","d":"13.44","p":"27.99"},{"id":"59IF","m":"ENDOCARE RADIANCE FERULIC EDAFENCE SERUM F X 30ML","linea":"CANTABRIA","c":"35.09","f":"32.75","d":"28.08","p":"58.49"},{"id":"123IF","m":"ENDO RADIANCE CONTORNO DE OJOS TUBO X 15ML","linea":"CANTABRIA","c":"29.99","f":"27.99","d":"24.00","p":"49.99"},{"id":"189IF","m":"ENDO RADIANCE C20% SERUM Fx30mL","linea":"CANTABRIA","c":"44.99","f":"41.99","d":"36.00","p":"74.99"},{"id":"187IF","m":"ENDO AGE BARRIER HYALU. GELCREAM Ta.x50mL","linea":"CANTABRIA","c":"29.39","f":"27.43","d":"23.52","p":"48.99"},{"id":"147IF","m":"ENDO GLYCOPERFECT (AZ) INTENSIVE SERUM FX50ML","linea":"CANTABRIA","c":"39.59","f":"36.95","d":"31.68","p":"65.99"},{"id":"149IF","m":"ENDO GLYCOPERFECT (AZ) CREAMY CLEANSER FX150ML","linea":"CANTABRIA","c":"20.99","f":"19.59","d":"16.80","p":"34.99"},{"id":"78IF","m":"ENDO HYDRACTIVE MICELLAR SOLUTION FX100ML","linea":"CANTABRIA","c":"6.89","f":"6.43","d":"5.52","p":"11.49"},{"id":"81IF","m":"ENDO HYDRACTIVE MICELLAR SOLUTION FX400ML","linea":"CANTABRIA","c":"18.29","f":"17.07","d":"14.64","p":"30.49"},{"id":"10IF","m":"ENDO TENSAGE CONCENTRATE AMPOLLAS 10X2ML","linea":"CANTABRIA","c":"47.09","f":"43.95","d":"37.68","p":"78.49"},{"id":"12IF","m":"ENDO TENSAGE CONT. ILUMINADOR","linea":"CANTABRIA","c":"29.09","f":"27.15","d":"23.28","p":"48.49"},{"id":"14IF","m":"ENDO TENSAGE CREAM 30 ML","linea":"CANTABRIA","c":"26.99","f":"25.19","d":"21.60","p":"44.99"},{"id":"76IF","m":"ENDO TENSAGE NOURISHING CREAM Tx50ml","linea":"CANTABRIA","c":"29.09","f":"27.15","d":"23.28","p":"48.49"},{"id":"16IF","m":"ENDO TENSAGE SERUM 30 ML","linea":"CANTABRIA","c":"30.29","f":"28.27","d":"24.24","p":"50.49"},{"id":"145IF","m":"ENDO RENEWAL CONTORNO DE OJOS FX15ML","linea":"CANTABRIA","c":"34.19","f":"31.91","d":"27.39","p":"56.99"},{"id":"121IF","m":"ENDOCARE RENEWAL RETINOL SERUM","linea":"CANTABRIA","c":"43.79","f":"40.87","d":"35.04","p":"72.99"},{"id":"119IF","m":"ENDOCARE RENEWAL RETINOL INTENSIVE SERUM","linea":"CANTABRIA","c":"46.79","f":"43.67","d":"37.44","p":"77.99"},{"id":"117IF","m":"ENDOCARE RENEWAL COMFORT CREAM","linea":"CANTABRIA","c":"26.99","f":"25.19","d":"21.60","p":"44.99"},{"id":"55IF","m":"HELIO 360 MD AK FLUID TUBO X 50ML","linea":"CANTABRIA","c":"23.69","f":"22.11","d":"18.96","p":"39.49"},{"id":"18IF","m":"HELIO 360 GEL OIL FREE SPF50 50ML","linea":"CANTABRIA","c":"23.09","f":"21.55","d":"18.48","p":"38.49"},{"id":"20IF","m":"HELIO 360 MINERAL TOLERANCE SPF50 50 ML","linea":"CANTABRIA","c":"23.69","f":"22.11","d":"18.96","p":"39.49"},{"id":"47IF","m":"HELIO CAPSULAS ORAL F X 60ML","linea":"CANTABRIA","c":"23.69","f":"22.11","d":"18.96","p":"39.49"},{"id":"155IF","m":"HELIOCARE 360° BODY GLOW X 100ML","linea":"CANTABRIA","c":"25.79","f":"24.07","d":"20.64","p":"42.99"},{"id":"65IF","m":"HELIO 360º COLOR GEL OIL FREE BEIGE T X 50ML","linea":"CANTABRIA","c":"23.69","f":"22.11","d":"18.96","p":"39.49"},{"id":"67IF","m":"HELIO 360º COLOR GEL OIL FREE BRONZE T X 50ML","linea":"CANTABRIA","c":"23.69","f":"22.11","d":"18.96","p":"39.49"},{"id":"141IF","m":"HELIO 360° COMPACT OIL FREE PEARL 10g","linea":"CANTABRIA","c":"23.99","f":"22.39","d":"19.20","p":"39.99"},{"id":"142IF","m":"HELIO 360° COMPACT OIL FREE BEIGE 10g","linea":"CANTABRIA","c":"23.99","f":"22.39","d":"19.20","p":"39.99"},{"id":"143IF","m":"HELIO 360° COMPACT OIL FREE BRONZE 10g","linea":"CANTABRIA","c":"23.99","f":"22.39","d":"19.20","p":"39.99"},{"id":"151IF","m":"HELIO 360 SENSATION SPF50+ FX50ML","linea":"CANTABRIA","c":"23.99","f":"22.39","d":"19.20","p":"39.99"},{"id":"61IF","m":"HELIOCARE 360º PEDIATRICS TRANSPARENT SPRAY F X 200ML","linea":"CANTABRIA","c":"24.89","f":"23.23","d":"19.92","p":"41.49"},{"id":"100IF","m":"HELIO 360º AGE ACTIVE FLUID TUBO X 50ML","linea":"CANTABRIA","c":"23.69","f":"22.11","d":"18.96","p":"39.49"},{"id":"82IF","m":"HELIO 360° PEDIATRICS MINERAL SPF50+ Fx50mL","linea":"CANTABRIA","c":"20.39","f":"19.03","d":"16.32","p":"33.99"},{"id":"91IF","m":"HELIO 360° PIGMENT SOLUTION FLUID F X 50ml","linea":"CANTABRIA","c":"23.69","f":"22.11","d":"18.96","p":"39.49"},{"id":"84IF","m":"HELIO 360° WATER GEL SPF50+ Fx50mL","linea":"CANTABRIA","c":"23.09","f":"21.55","d":"18.48","p":"38.49"},{"id":"135IF","m":"HELIO 360° WATER GEL COLOR BEIGE FX50ML","linea":"CANTABRIA","c":"24.59","f":"22.95","d":"19.68","p":"40.99"},{"id":"137IF","m":"HELIO 360° WATER GEL COLOR BRONZE FX50ML","linea":"CANTABRIA","c":"24.59","f":"22.95","d":"19.68","p":"40.99"},{"id":"139IF","m":"HELIO .360° SPORT STICK","linea":"CANTABRIA","c":"23.99","f":"22.39","d":"19.20","p":"39.99"},{"id":"140IF","m":"HELIO .360° PEDIATRICS STICK","linea":"CANTABRIA","c":"23.99","f":"22.39","d":"19.20","p":"39.99"},{"id":"173IF","m":"HELIO 360° ACNIMAT 50ML","linea":"CANTABRIA","c":"26.99","f":"25.19","d":"21.60","p":"44.99"},{"id":"175IF","m":"HELIOCARE 360 ADVANCED GEL 250ML","linea":"CANTABRIA","c":"25.19","f":"23.51","d":"20.16","p":"41.99"},{"id":"41IF","m":"HELIO COLOR GELCREAM LIGHT","linea":"CANTABRIA","c":"20.39","f":"19.03","d":"16.32","p":"33.99"},{"id":"28IF","m":"HELIO SPF50 SPRAY 200 ML","linea":"CANTABRIA","c":"23.69","f":"22.11","d":"18.96","p":"39.49"},{"id":"30IF","m":"HELIO SPF90 GEL ULT 50ML","linea":"CANTABRIA","c":"20.39","f":"19.03","d":"16.32","p":"33.99"},{"id":"111IF","m":"HELIOCARE 360 MD A-R EMULSION","linea":"CANTABRIA","c":"24.59","f":"22.95","d":"19.68","p":"40.99"},{"id":"89IF","m":"HELIOCARE ULTRA D","linea":"CANTABRIA","c":"27.59","f":"25.75","d":"22.08","p":"45.99"},{"id":"102IF","m":"IRALTONE CHAMPÚ DS TUBO X 200ML","linea":"CANTABRIA","c":"19.19","f":"17.91","d":"15.36","p":"31.99"},{"id":"115IF","m":"IRALTONE LOCION ANTICAÍDA","linea":"CANTABRIA","c":"25.19","f":"23.51","d":"20.16","p":"41.99"},{"id":"159IF","m":"IRALTONE SERUM 2 EN 1 PESTAÑAS FX10ML","linea":"CANTABRIA","c":"32.99","f":"30.79","d":"26.40","p":"54.99"},{"id":"104IF","m":"IRALTONE CHAMPÚ FORTIFICANTE TUBO X 200ML","linea":"CANTABRIA","c":"14.99","f":"13.99","d":"12.00","p":"24.99"},{"id":"165IF","m":"IRALTONE CHAMPÚ FORTIFICANTE TUBO X 400ML","linea":"CANTABRIA","c":"25.19","f":"23.51","d":"20.16","p":"41.99"},{"id":"106IF","m":"IRALTONE CHAMPÚ SEBO-REGULADOR TUBO X 200ML","linea":"CANTABRIA","c":"17.99","f":"16.79","d":"14.40","p":"29.99"},{"id":"130IF","m":"IRALTONE CHAMPÚ SUAVE USO FRECUENTE FX 200ML","linea":"CANTABRIA","c":"13.99","f":"12.99","d":"12.00","p":"24.99"},{"id":"96IF","m":"IRALTONE DS GEL TUBO X 50ML","linea":"CANTABRIA","c":"16.79","f":"15.67","d":"13.44","p":"27.99"},{"id":"177IF","m":"IRALTONE BARRIER COMFORT SHAMPOO Fx250ML","linea":"CANTABRIA","c":"26.39","f":"24.63","d":"21.12","p":"43.99"},{"id":"179IF","m":"IRALTONE PERFECT10 LEAVE-IN Fx150mL","linea":"CANTABRIA","c":"20.99","f":"19.59","d":"16.80","p":"34.99"},{"id":"180IF","m":"IRALTONE RESET DEEP-CLEANSING SHAMPOO Fx250mL","linea":"CANTABRIA","c":"26.39","f":"24.63","d":"21.12","p":"43.99"},{"id":"182IF","m":"IRALTONE RESTORE CONDITIONER Fx200mL","linea":"CANTABRIA","c":"28.79","f":"26.87","d":"23.04","p":"47.99"},{"id":"184IF","m":"IRALTONE SUBLIME HAIR REPAIR OIL Fx50mL","linea":"CANTABRIA","c":"23.39","f":"21.83","d":"18.72","p":"38.99"},{"id":"153IF","m":"NEORETIN DC SENSITIVE AREAS BODY LOTION FX100ML","linea":"CANTABRIA","c":"29.99","f":"27.99","d":"24.00","p":"49.99"},{"id":"36IF","m":"NEORETIN DISC. SERUM FLUID 30ML","linea":"CANTABRIA","c":"30.29","f":"28.27","d":"24.24","p":"50.49"},{"id":"131IF","m":"NEORETIN PIGMENT NEUTRALIZER SERUM FX30ML","linea":"CANTABRIA","c":"29.39","f":"27.29","d":"25.20","p":"52.49"},{"id":"34IF","m":"NEORETIN DISC.GELCREAM SPF50 40ML","linea":"CANTABRIA","c":"26.99","f":"25.19","d":"21.60","p":"44.99"},{"id":"98IF","m":"NEORETIN ULTRA EMULSION FX30ML","linea":"CANTABRIA","c":"40.49","f":"37.79","d":"32.40","p":"67.49"},{"id":"62IF","m":"KIT BIRETIX ANTI-ACNÉ","linea":"CANTABRIA","c":"31.79","f":"31.79","d":"31.79","p":"52.99"},{"id":"43IF","m":"KIT ENDOCARE TRATAMIENTO ANTIEDAD","linea":"CANTABRIA","c":"47.14","f":"47.14","d":"47.14","p":"74.99"},{"id":"38IF","m":"KIT PROTECTOR SOLAR HELIOCARE","linea":"CANTABRIA","c":"30.96","f":"30.96","d":"30.96","p":"50.49"},{"id":"160IF","m":"SKIN RESIST DAILY FLUID 50ML","linea":"CANTABRIA","c":"25.79","f":"24.07","d":"20.64","p":"42.99"},{"id":"162IF","m":"SKIN RESIST SENSAGE SERUM 30ML","linea":"CANTABRIA","c":"31.19","f":"29.11","d":"24.96","p":"51.99"},{"id":"166IF","m":"SKIN RESIST VELVET CLEANSER 200ML","linea":"CANTABRIA","c":"20.99","f":"19.59","d":"16.80","p":"34.99"},{"id":"15VN","m":"BELCILS ESPUMA LIMPIADORA 50 ML.","linea":"LABORATORIOS VIÑAS","c":"15.59","f":"14.55","d":"12.48","p":"25.99"},{"id":"13VN","m":"BELCILS CR. REGENERADORA INTENSIVA 4 ML.","linea":"LABORATORIOS VIÑAS","c":"19.79","f":"18.47","d":"15.84","p":"32.99"},{"id":"19VN","m":"BELCILS ROLL-ON DESESTRESANTE","linea":"LABORATORIOS VIÑAS","c":"19.19","f":"17.91","d":"15.36","p":"31.99"},{"id":"17VN","m":"BELCILS LÁPIZ TEXTURA CREMOSA- NEGRO","linea":"LABORATORIOS VIÑAS","c":"11.99","f":"11.19","d":"9.60","p":"19.99"},{"id":"16VN","m":"BELCILS LÁPIZ TEXTURA CREMOSA- MARRON","linea":"LABORATORIOS VIÑAS","c":"11.99","f":"11.19","d":"9.60","p":"19.99"},{"id":"18VN","m":"BELCILS MASCARA EXTRA VOLUMEN","linea":"LABORATORIOS VIÑAS","c":"25.19","f":"23.51","d":"20.16","p":"41.99"},{"id":"14VN","m":"BELCILS CORRECTOR INVISIBLE.","linea":"LABORATORIOS VIÑAS","c":"23.39","f":"21.83","d":"18.72","p":"38.99"},{"id":"20VN","m":"BLEFARIX. 50 TOALLITAS","linea":"LABORATORIOS VIÑAS","c":"23.39","f":"21.83","d":"18.72","p":"38.99"},{"id":"03VN","m":"EMOLIENTA LABIOS TUBO X 15ML","linea":"LABORATORIOS VIÑAS","c":"8.39","f":"7.83","d":"6.72","p":"13.99"},{"id":"05VN","m":"EMOLIENTA NASAL TUBO X 10ML","linea":"LABORATORIOS VIÑAS","c":"8.39","f":"7.83","d":"6.72","p":"13.99"},{"id":"01VN","m":"EMOLIENTA EMULSION FLUIDA EMULSION FX400ML","linea":"LABORATORIOS VIÑAS","c":"31.79","f":"29.67","d":"25.44","p":"52.99"},{"id":"10VN","m":"EMOLIENTA UÑAS TUBO X15ML","linea":"LABORATORIOS VIÑAS","c":"11.99","f":"11.19","d":"9.60","p":"19.99"},{"id":"06VN","m":"EMOLIENTA PALPEBRAL CREMA TUBO X10ML","linea":"LABORATORIOS VIÑAS","c":"14.99","f":"13.99","d":"12.00","p":"24.99"},{"id":"08VN","m":"EMOLIENTA QP CREMA TUBO X300ML","linea":"LABORATORIOS VIÑAS","c":"34.19","f":"31.91","d":"27.36","p":"56.99"},{"id":"22VN","m":"EMOLIENTA MANOS. 50 ML.","linea":"LABORATORIOS VIÑAS","c":"11.99","f":"11.19","d":"9.60","p":"19.99"},{"id":"11VN","m":"HIPOSODUL ROLL-ON BOTELLA FX50ML","linea":"LABORATORIOS VIÑAS","c":"11.99","f":"11.19","d":"9.60","p":"19.99"},{"id":"12VN","m":"SALTRATOS DB TUBO X 100ML","linea":"LABORATORIOS VIÑAS","c":"16.79","f":"15.59","d":"14.40","p":"29.99"},{"id":"26VN","m":"ROSADERM. 30 ML.","linea":"LABORATORIOS VIÑAS","c":"19.79","f":"18.47","d":"15.84","p":"32.99"},{"id":"25VN","m":"ROSADERM FAST. 30ML.","linea":"LABORATORIOS VIÑAS","c":"21.59","f":"20.15","d":"17.28","p":"35.99"},{"id":"24VN","m":"HIPOSUDOL SPRAY. 100ML","linea":"LABORATORIOS VIÑAS","c":"17.99","f":"16.79","d":"14.40","p":"29.99"}];
+  const META = {"total":259,"publicado":"2026-10-13T04:26:33+00:00","vigencia":["VIGENTE A PARTIR DEL 11 DE MAYO 2026"],"hojas":["Hoja8"],"sinPrecioPublico":13,"advertencias":[]};
+  const categories = [
+    ['c', 'Cadenas'], ['f', 'Farmacias Indep.'],
+    ['d', 'Distribuidores'], ['p', 'P. Público']
+  ];
+  const $ = id => document.getElementById(id);
+  const normalize = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const compact = value => normalize(value).replace(/[^a-z0-9]/g, '');
+  const indexed = DATA.map(item => ({ item, text: normalize(`${item.m} ${item.id} ${item.linea}`), compact: compact(`${item.m} ${item.id} ${item.linea}`) }));
+  let filtered = DATA;
+  let limit = 60;
+  let toastTimer;
+  let queryTimer;
 
-      const searchInput = document.getElementById('q');
-      const resultsContainer = document.getElementById('r');
-      const countLabel = document.getElementById('countLabel');
-      const emptyState = document.getElementById('emptyState');
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
 
-      function showToast(message) {
-        const toast = document.getElementById('toast');
-        toast.textContent = message;
-        toast.className = 'show';
-        setTimeout(() => { toast.className = toast.className.replace('show', ''); }, 3000);
+  function showToast(message) {
+    clearTimeout(toastTimer);
+    $('toast').textContent = message;
+    $('toast').classList.add('show');
+    toastTimer = setTimeout(() => $('toast').classList.remove('show'), 3500);
+  }
+
+  async function copyPrice(item, key, button) {
+    if (item[key] === null) return;
+    const text = `${item.m} - $${item[key]}`;
+    let copied = false;
+    if (navigator.clipboard && window.isSecureContext) {
+      try { await navigator.clipboard.writeText(text); copied = true; } catch (_) { /* Alternativa local. */ }
+    }
+    if (!copied) {
+      const area = element('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+      document.body.appendChild(area);
+      try {
+        area.select();
+        area.setSelectionRange(0, text.length);
+        copied = document.execCommand('copy');
+      } catch (_) { copied = false; }
+      finally { area.remove(); button.focus({ preventScroll: true }); }
+    }
+    if (copied) {
+      showToast('Copiado: ' + text);
+    } else {
+      window.prompt('Selecciona y copia este texto:', text);
+    }
+  }
+
+  function render() {
+    const selectedCategory = $('categoria').value;
+    const visible = filtered.slice(0, limit);
+    $('countLabel').textContent = filtered.length;
+    $('shownLabel').textContent = visible.length;
+    $('totalLabel').textContent = DATA.length;
+    $('emptyState').classList.toggle('visible', filtered.length === 0);
+    $('more').hidden = visible.length >= filtered.length;
+    $('more').textContent = `Cargar más (${filtered.length - visible.length} pendientes)`;
+    const fragment = document.createDocumentFragment();
+    for (const item of visible) {
+      const card = element('article', 'card');
+      card.appendChild(element('h2', 'med-name', item.m));
+      card.appendChild(element('p', 'product-meta', `${item.linea} · Código ${item.id}`));
+      const grid = element('div', 'price-grid');
+      for (const [key, label] of categories) {
+        if (selectedCategory && key !== selectedCategory) continue;
+        const priceItem = element('div', 'price-item');
+        const info = element('div', 'price-info');
+        info.appendChild(element('span', 'price-label', label));
+        const available = item[key] !== null;
+        info.appendChild(element('span', available ? `price-value${key === 'p' ? ' public' : ''}` : 'unavailable', available ? `$${item[key]}` : 'No disponible'));
+        priceItem.appendChild(info);
+        if (available) {
+          const button = element('button', 'copy-btn');
+          button.type = 'button';
+          button.title = `Copiar precio para ${label}`;
+          button.setAttribute('aria-label', `Copiar ${item.m}, ${label}, $${item[key]}`);
+          // SVG estático, sin interpolar valores procedentes del Excel.
+          button.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>';
+          button.addEventListener('click', () => copyPrice(item, key, button));
+          priceItem.appendChild(button);
+        }
+        grid.appendChild(priceItem);
       }
+      card.appendChild(grid);
+      fragment.appendChild(card);
+    }
+    $('r').replaceChildren(fragment);
+  }
 
-      window.copiarPrecio = function(index, categoria) {
-        const item = DATA[index];
-        const keyMap = { 'Cadenas': 'c', 'Farmacias Indep.': 'f', 'Distribuidores': 'd', 'P. Público': 'p' };
-        const key = keyMap[categoria];
-        const precio = item[key];
+  function search() {
+    clearTimeout(queryTimer);
+    const terms = normalize($('q').value).split(/\s+/).filter(Boolean);
+    const line = $('linea').value;
+    filtered = indexed.filter(entry => (!line || entry.item.linea === line) && terms.every(term => entry.text.includes(term) || (compact(term).length > 0 && entry.compact.includes(compact(term))))).map(entry => entry.item);
+    limit = 60;
+    $('clear').hidden = !$('q').value;
+    render();
+  }
 
-        if (!precio || precio === "" || precio === "N/A") {
-          showToast('⚠️ Precio no disponible');
-          return;
-        }
+  const lines = [...new Set(DATA.map(item => item.linea))];
+  for (const line of lines) {
+    const option = element('option', '', line);
+    option.value = line;
+    $('linea').appendChild(option);
+  }
+  $('q').addEventListener('input', () => { clearTimeout(queryTimer); queryTimer = setTimeout(search, 100); });
+  $('linea').addEventListener('change', search);
+  $('categoria').addEventListener('change', search);
+  $('clear').addEventListener('click', () => { $('q').value = ''; search(); $('q').focus(); });
+  $('q').addEventListener('keydown', event => { if (event.key === 'Escape') { $('q').value = ''; search(); } });
+  $('more').addEventListener('click', () => { limit += 60; render(); });
 
-        const textoParaWhatsApp = `${item.m} - $${parseFloat(precio).toFixed(2)}`;
-        
-        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-          navigator.clipboard.writeText(textoParaWhatsApp).then(() => {
-            showToast('✅ Copiado: ' + textoParaWhatsApp);
-          }).catch(() => {
-            fallbackCopy(textoParaWhatsApp);
-          });
-        } else {
-          fallbackCopy(textoParaWhatsApp);
-        }
-      };
-
-      function fallbackCopy(text) {
-        try {
-          const textArea = document.createElement('textarea');
-          textArea.value = text;
-          textArea.style.position = 'fixed';
-          textArea.style.top = '0';
-          textArea.style.left = '0';
-          textArea.style.width = '2em';
-          textArea.style.height = '2em';
-          textArea.style.padding = '0';
-          textArea.style.border = 'none';
-          textArea.style.outline = 'none';
-          textArea.style.boxShadow = 'none';
-          textArea.style.background = 'transparent';
-          textArea.style.opacity = '0';
-          
-          document.body.appendChild(textArea);
-          textArea.focus();
-          textArea.select();
-          
-          const successful = document.execCommand('copy');
-          document.body.removeChild(textArea);
-          
-          if (successful) {
-            showToast('✅ Copiado: ' + text);
-          } else {
-            showToast(' Error al copiar');
-            prompt('Copia manualmente:', text);
-          }
-        } catch (err) {
-          showToast('❌ Error');
-          prompt('Copia manualmente:', text);
-        }
-      }
-
-      function renderResults(data) {
-        resultsContainer.innerHTML = '';
-        countLabel.textContent = data.length;
-
-        if (data.length === 0) {
-          emptyState.classList.add('visible');
-          return;
-        }
-        emptyState.classList.remove('visible');
-
-        const displayData = data.length > 100 ? data.slice(0, 100) : data;
-        
-        if (data.length > 100) {
-          const moreMsg = document.createElement('div');
-          moreMsg.style.cssText = 'text-align:center;padding:1rem;color:var(--text-muted);font-size:0.9rem;';
-          moreMsg.innerHTML = `Mostrando los primeros 100 resultados de ${data.length}.<br>Refina tu búsqueda para ver más.`;
-          resultsContainer.appendChild(moreMsg);
-        }
-
-        displayData.forEach((item, index) => {
-          const originalIndex = DATA.indexOf(item);
-          
-          const card = document.createElement('div');
-          card.className = 'card';
-
-          let pricesHTML = '';
-          if (item.c && item.c !== "" && item.c !== "N/A") {
-            pricesHTML += `<div class="price-item">
-              <div class="price-info"><span class="price-label">Cadenas</span><span class="price-value">$${parseFloat(item.c).toFixed(2)}</span></div>
-              <button class="copy-btn" onclick="copiarPrecio(${originalIndex}, 'Cadenas')" title="Copiar">📋</button>
-            </div>`;
-          }
-          if (item.f && item.f !== "" && item.f !== "N/A") {
-            pricesHTML += `<div class="price-item">
-              <div class="price-info"><span class="price-label">Farmacias Indep.</span><span class="price-value">$${parseFloat(item.f).toFixed(2)}</span></div>
-              <button class="copy-btn" onclick="copiarPrecio(${originalIndex}, 'Farmacias Indep.')" title="Copiar">📋</button>
-            </div>`;
-          }
-          if (item.d && item.d !== "" && item.d !== "N/A") {
-            pricesHTML += `<div class="price-item">
-              <div class="price-info"><span class="price-label">Distribuidores</span><span class="price-value">$${parseFloat(item.d).toFixed(2)}</span></div>
-              <button class="copy-btn" onclick="copiarPrecio(${originalIndex}, 'Distribuidores')" title="Copiar"></button>
-            </div>`;
-          }
-          if (item.p && item.p !== "" && item.p !== "N/A") {
-            pricesHTML += `<div class="price-item">
-              <div class="price-info"><span class="price-label">P. Público</span><span class="price-value public">$${parseFloat(item.p).toFixed(2)}</span></div>
-              <button class="copy-btn" onclick="copiarPrecio(${originalIndex}, 'P. Público')" title="Copiar">📋</button>
-            </div>`;
-          }
-
-          card.innerHTML = `<div class="med-name">${item.m}</div><div class="price-grid">${pricesHTML}</div>`;
-          resultsContainer.appendChild(card);
-        });
-      }
-
-      searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        const filtered = DATA.filter(item => item.m.toLowerCase().includes(query));
-        renderResults(filtered);
-      });
-
-      renderResults(DATA);
-    })();
+  $('catalogTotal').textContent = DATA.length;
+  $('validity').textContent = META.vigencia.length ? META.vigencia.join(' · ') : 'Fecha de vigencia no indicada en el Excel';
+  const published = new Date(META.publicado);
+  $('publication').textContent = 'Catálogo generado: ' + published.toLocaleString('es-SV', { timeZone: 'America/El_Salvador', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) + ' (UTC−6)';
+  search();
+})();
   </script>
 </body>
 </html>
